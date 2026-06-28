@@ -1,7 +1,5 @@
 import { ImageResponse } from 'next/og'
 
-export const runtime = 'nodejs'
-
 const W = 1080
 const H = 1350
 const YELLOW = '#FCD116'
