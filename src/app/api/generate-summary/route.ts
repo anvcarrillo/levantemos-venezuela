@@ -318,11 +318,13 @@ ${resourcesBlock}`,
   // 6. Parse
   type CategorySummary = { category: string; slug: string; zones: string[]; materials: string[]; warnings: string[]; tips: string[] }
   let parsed: { mega_synthesis: string; category_summaries: CategorySummary[]; conclusions: string }
+  const rawClaudeText = (message.content[0] as { type: string; text: string }).text
+  let parseError = ''
 
   try {
-    const raw = (message.content[0] as { type: string; text: string }).text
-    parsed = JSON.parse(raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim())
-  } catch {
+    parsed = JSON.parse(rawClaudeText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim())
+  } catch (e) {
+    parseError = String(e).slice(0, 120)
     parsed = { mega_synthesis: 'Análisis generado automáticamente.', category_summaries: [], conclusions: 'No se pudo estructurar el análisis.' }
   }
 
@@ -346,5 +348,7 @@ ${resourcesBlock}`,
     id: data.id,
     categories_analyzed: parsed.category_summaries.length,
     ayuda_status: ayudaStatus,
+    debug_parse_error: parseError || null,
+    debug_claude_snippet: rawClaudeText.slice(0, 400),
   })
 }
