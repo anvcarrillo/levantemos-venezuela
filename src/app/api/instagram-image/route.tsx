@@ -1,6 +1,5 @@
 import { ImageResponse } from 'next/og'
 
-// Instagram portrait format: 1080 × 1350
 const W = 1080
 const H = 1350
 
@@ -12,21 +11,20 @@ const GRAY = '#6B7280'
 const LIGHT = '#F3F4F6'
 const BORDER = '#E5E7EB'
 
-// Column config — total 1000px (40px padding each side)
+// 7 columns, total 1000px (40px left padding, 40px right)
 const COLS = [
-  { label: 'Centro',              w: 165, key: 'centro'          },
-  { label: 'Dirección',           w: 150, key: 'direccion'       },
-  { label: 'Materiales Necesarios', w: 200, key: 'materiales'   },
-  { label: 'Info de Contacto',    w: 130, key: 'contacto'        },
-  { label: 'Nivel',               w:  70, key: 'nivel'           },
-  { label: 'Advertencias',        w: 140, key: 'advertencias'    },
-  { label: 'Recomendaciones',     w: 145, key: 'recomendaciones' },
+  { label: 'CENTRO',              w: 160 },
+  { label: 'DIRECCIÓN',           w: 148 },
+  { label: 'MATERIALES',          w: 200 },
+  { label: 'CONTACTO',            w: 128 },
+  { label: 'NIVEL',               w:  68 },
+  { label: 'ADVERTENCIAS',        w: 148 },
+  { label: 'RECOMENDACIONES',     w: 148 },
 ]
-// 165+150+200+130+70+140+145 = 1000
 
 const FETCH_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-  'Accept': 'application/json, */*',
+  'Accept': 'application/json',
   'Referer': 'https://ayudaencamino.com/organizaciones',
 }
 
@@ -34,14 +32,11 @@ type Need = {
   id: number
   orgId: number
   nombreArticulo: string
-  categoria: string
-  descripcion: string
   cantidadNecesaria: number
   cantidadComprometida: number
   cantidadCumplida: number
   status: string
   organizacion: {
-    id: number
     nombre: string
     tipo: string
     estado: string
@@ -54,6 +49,7 @@ type Need = {
 }
 
 type OrgGroup = {
+  orgId: number
   org: Need['organizacion']
   needs: Need[]
   activaCount: number
@@ -61,15 +57,16 @@ type OrgGroup = {
 }
 
 async function fetchOrgs(): Promise<{ orgs: OrgGroup[]; generatedAt: string }> {
-  const controller = new AbortController()
-  setTimeout(() => controller.abort(), 12000)
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), 12000)
 
   const [r1, r2] = await Promise.allSettled([
     fetch('https://ayudaencamino.com/api/needs?urgencia=critica&status=activa',
-      { cache: 'no-store', signal: controller.signal, headers: FETCH_HEADERS }),
+      { cache: 'no-store', signal: ctrl.signal, headers: FETCH_HEADERS }),
     fetch('https://ayudaencamino.com/api/needs?urgencia=critica&status=parcial',
-      { cache: 'no-store', signal: controller.signal, headers: FETCH_HEADERS }),
+      { cache: 'no-store', signal: ctrl.signal, headers: FETCH_HEADERS }),
   ])
+  clearTimeout(t)
 
   const all: Need[] = []
   if (r1.status === 'fulfilled' && r1.value.ok) all.push(...await r1.value.json() as Need[])
@@ -81,7 +78,7 @@ async function fetchOrgs(): Promise<{ orgs: OrgGroup[]; generatedAt: string }> {
   const byOrg = new Map<number, OrgGroup>()
   for (const n of unique) {
     if (!byOrg.has(n.orgId)) {
-      byOrg.set(n.orgId, { org: n.organizacion, needs: [], activaCount: 0, parcialCount: 0 })
+      byOrg.set(n.orgId, { orgId: n.orgId, org: n.organizacion, needs: [], activaCount: 0, parcialCount: 0 })
     }
     const g = byOrg.get(n.orgId)!
     g.needs.push(n)
@@ -98,177 +95,188 @@ async function fetchOrgs(): Promise<{ orgs: OrgGroup[]; generatedAt: string }> {
 }
 
 function clip(s: string, max: number) {
-  return s.length > max ? s.slice(0, max - 1) + '…' : s
+  return s.length > max ? s.slice(0, max - 1) + '...' : s
 }
 
-function OrgRow({ g, rowH, shade }: { g: OrgGroup; rowH: number; shade: boolean }) {
+function Row({ g, rowH, shade, idx }: { g: OrgGroup; rowH: number; shade: boolean; idx: number }) {
+  void idx
   const org = g.org
-  const remaining = g.needs.map(n => n.cantidadNecesaria - n.cantidadComprometida - n.cantidadCumplida)
-  const materialsLines = g.needs.slice(0, 4).map((n, i) => {
-    const rem = remaining[i]
-    return `• ${clip(n.nombreArticulo, 22)}${rem > 0 ? ` ×${rem}` : ''}`
-  })
-  if (g.needs.length > 4) materialsLines.push(`  +${g.needs.length - 4} más`)
-
   const tipo = org.tipo.replace(/_/g, ' ')
-  const nivel = g.activaCount > 0 ? `CRÍTICA` : 'PARCIAL'
+  const nivel = g.activaCount > 0 ? 'CRITICA' : 'PARCIAL'
   const nivelColor = g.activaCount > 0 ? RED : '#D97706'
-  const advertencia = g.activaCount > 0
-    ? `${g.activaCount} item${g.activaCount > 1 ? 's' : ''} sin ningún compromiso — actuar ya`
-    : `${g.parcialCount} item${g.parcialCount > 1 ? 's' : ''} parcialmente cubiertos`
-  const recomendacion = org.contactoTelefono
-    ? `Llamar antes de ir:\n${org.contactoNombre ?? ''}\n${org.contactoTelefono}`
-    : org.verificada ? 'Organización verificada — ir directo a la dirección' : 'Coordinar por redes antes de ir'
+  const countLabel = `${g.needs.length} item${g.needs.length !== 1 ? 's' : ''}`
+
+  const materialLines = g.needs.slice(0, 4).map(n => {
+    const rem = n.cantidadNecesaria - n.cantidadComprometida - n.cantidadCumplida
+    return `• ${clip(n.nombreArticulo, 20)}${rem > 0 ? ` x${rem}` : ''}`
+  })
+  if (g.needs.length > 4) materialLines.push(`  +${g.needs.length - 4} mas`)
+
+  const advText = g.activaCount > 0
+    ? `${g.activaCount} sin compromiso - urgente`
+    : `${g.parcialCount} parcialmente cubiertos`
+
+  const recLines = org.contactoTelefono
+    ? ['Llamar antes de ir:', org.contactoNombre ?? '', org.contactoTelefono]
+    : [org.verificada ? 'Org. verificada' : 'Coordinar por redes', 'antes de ir']
+
+  const colStyle = (idx2: number): React.CSSProperties => ({
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    justifyContent: 'center' as const,
+    width: COLS[idx2].w,
+    height: rowH,
+    padding: '4px 6px',
+    borderRight: idx2 < COLS.length - 1 ? `1px solid ${BORDER}` : undefined,
+  })
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'row',
-        height: rowH,
-        backgroundColor: shade ? LIGHT : '#ffffff',
-        borderBottom: `1px solid ${BORDER}`,
-        alignItems: 'stretch',
-      }}
-    >
+    <div style={{
+      display: 'flex',
+      flexDirection: 'row',
+      height: rowH,
+      backgroundColor: shade ? LIGHT : '#ffffff',
+      borderBottom: `1px solid ${BORDER}`,
+    }}>
       {/* Centro */}
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: COLS[0].w, padding: '4px 8px', borderRight: `1px solid ${BORDER}` }}>
-        <div style={{ fontSize: 10, fontWeight: 800, color: DARK, lineHeight: 1.3 }}>{clip(org.nombre, 30)}</div>
-        <div style={{ fontSize: 9, color: GRAY, marginTop: 2 }}>{clip(tipo, 22)}</div>
-        {org.verificada && <div style={{ fontSize: 8, color: '#059669', marginTop: 2, fontWeight: 700 }}>✓ Verificada</div>}
+      <div style={colStyle(0)}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: DARK, lineHeight: 1.2 }}>{clip(org.nombre, 28)}</div>
+        <div style={{ fontSize: 8.5, color: GRAY, marginTop: 2 }}>{clip(tipo, 22)}</div>
+        {org.verificada && <div style={{ fontSize: 8, color: '#059669', marginTop: 2, fontWeight: 700 }}>Verificada</div>}
       </div>
 
-      {/* Dirección */}
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: COLS[1].w, padding: '4px 8px', borderRight: `1px solid ${BORDER}` }}>
-        <div style={{ fontSize: 9, color: DARK, lineHeight: 1.35 }}>{clip(org.direccion, 55)}</div>
-        <div style={{ fontSize: 9, color: GRAY, marginTop: 3, fontWeight: 600 }}>{org.ciudad}, {org.estado}</div>
+      {/* Direccion */}
+      <div style={colStyle(1)}>
+        <div style={{ fontSize: 8.5, color: DARK, lineHeight: 1.3 }}>{clip(org.direccion, 50)}</div>
+        <div style={{ fontSize: 8.5, color: GRAY, marginTop: 2, fontWeight: 600 }}>{org.ciudad}, {org.estado}</div>
       </div>
 
       {/* Materiales */}
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: COLS[2].w, padding: '4px 8px', borderRight: `1px solid ${BORDER}` }}>
-        {materialsLines.map((line, i) => (
-          <div key={i} style={{ fontSize: 9, color: DARK, lineHeight: 1.35 }}>{line}</div>
+      <div style={colStyle(2)}>
+        {materialLines.map((line, li) => (
+          <div key={li} style={{ fontSize: 8.5, color: DARK, lineHeight: 1.3 }}>{line}</div>
         ))}
       </div>
 
       {/* Contacto */}
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: COLS[3].w, padding: '4px 8px', borderRight: `1px solid ${BORDER}` }}>
-        {org.contactoNombre && <div style={{ fontSize: 9, color: DARK, fontWeight: 600 }}>{clip(org.contactoNombre, 20)}</div>}
-        {org.contactoTelefono && <div style={{ fontSize: 9, color: BLUE, marginTop: 2 }}>{org.contactoTelefono}</div>}
-        {!org.contactoNombre && !org.contactoTelefono && <div style={{ fontSize: 9, color: GRAY }}>No disponible</div>}
+      <div style={colStyle(3)}>
+        {org.contactoNombre
+          ? <div style={{ fontSize: 8.5, color: DARK, fontWeight: 600, lineHeight: 1.2 }}>{clip(org.contactoNombre, 22)}</div>
+          : null}
+        {org.contactoTelefono
+          ? <div style={{ fontSize: 8.5, color: BLUE, marginTop: 2 }}>{org.contactoTelefono}</div>
+          : null}
+        {!org.contactoNombre && !org.contactoTelefono
+          ? <div style={{ fontSize: 8.5, color: GRAY }}>No disponible</div>
+          : null}
       </div>
 
       {/* Nivel */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: COLS[4].w, padding: '4px 4px', borderRight: `1px solid ${BORDER}` }}>
-        <div style={{ display: 'flex', backgroundColor: nivelColor, color: 'white', fontSize: 8, fontWeight: 800, padding: '3px 5px', borderRadius: 4 }}>
+      <div style={{ ...colStyle(4), alignItems: 'center' }}>
+        <div style={{ display: 'flex', backgroundColor: nivelColor, color: 'white', fontSize: 8, fontWeight: 800, padding: '3px 4px', borderRadius: 3 }}>
           {nivel}
         </div>
-        <div style={{ fontSize: 8, color: GRAY, marginTop: 4, textAlign: 'center' }}>
-          {g.needs.length} items
-        </div>
+        <div style={{ fontSize: 8, color: GRAY, marginTop: 3 }}>{countLabel}</div>
       </div>
 
       {/* Advertencias */}
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: COLS[5].w, padding: '4px 8px', borderRight: `1px solid ${BORDER}` }}>
-        <div style={{ fontSize: 9, color: '#92400E', lineHeight: 1.35 }}>{advertencia}</div>
+      <div style={colStyle(5)}>
+        <div style={{ fontSize: 8.5, color: '#92400E', lineHeight: 1.3 }}>{advText}</div>
       </div>
 
       {/* Recomendaciones */}
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: COLS[6].w, padding: '4px 8px' }}>
-        <div style={{ fontSize: 9, color: '#1E40AF', lineHeight: 1.35, whiteSpace: 'pre-wrap' }}>{recomendacion}</div>
+      <div style={{ ...colStyle(6), borderRight: undefined }}>
+        {recLines.filter(Boolean).map((line, li) => (
+          <div key={li} style={{ fontSize: 8.5, color: '#1E40AF', lineHeight: 1.3 }}>{line}</div>
+        ))}
       </div>
     </div>
   )
 }
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const page = parseInt(searchParams.get('page') ?? '1', 10)
+  try {
+    const { searchParams } = new URL(request.url)
+    const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
 
-  const { orgs, generatedAt } = await fetchOrgs()
+    const { orgs, generatedAt } = await fetchOrgs()
 
-  const perPage = 8
-  const start = (page - 1) * perPage
-  const pageOrgs = orgs.slice(start, start + perPage)
-  const totalPages = Math.ceil(orgs.length / perPage)
+    const perPage = 8
+    const start = (page - 1) * perPage
+    const pageOrgs = orgs.slice(start, start + perPage)
+    const totalPages = Math.ceil(orgs.length / perPage)
 
-  if (!pageOrgs.length) {
-    return new Response('Page not found', { status: 404 })
-  }
+    if (!pageOrgs.length) {
+      return new Response('Page not found', { status: 404 })
+    }
 
-  const HEADER_H = 95
-  const COL_HEADER_H = 32
-  const FOOTER_H = 30
-  const rowH = Math.floor((H - HEADER_H - COL_HEADER_H - FOOTER_H) / perPage)
+    const HEADER_H = 90
+    const COL_H = 30
+    const FOOTER_H = 28
+    const rowH = Math.floor((H - HEADER_H - COL_H - FOOTER_H) / perPage)
 
-  return new ImageResponse(
-    (
-      <div style={{ display: 'flex', flexDirection: 'column', width: W, height: H, backgroundColor: '#ffffff', fontFamily: 'sans-serif' }}>
+    const totalNeeds = orgs.reduce((s, g) => s + g.needs.length, 0)
 
-        {/* Flag stripe */}
-        <div style={{ display: 'flex', height: 10 }}>
-          <div style={{ flex: 1, backgroundColor: YELLOW }} />
-          <div style={{ flex: 1, backgroundColor: BLUE }} />
-          <div style={{ flex: 1, backgroundColor: RED }} />
-        </div>
+    return new ImageResponse(
+      (
+        <div style={{ display: 'flex', flexDirection: 'column', width: W, height: H, backgroundColor: '#ffffff', fontFamily: 'sans-serif' }}>
 
-        {/* Header */}
-        <div style={{ display: 'flex', backgroundColor: BLUE, padding: '12px 40px', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ color: YELLOW, fontSize: 13, fontWeight: 900 }}>Levantando a Venezuela · Coordinación de Voluntarios</div>
-            <div style={{ color: '#ffffff', fontSize: 22, fontWeight: 900, marginTop: 3 }}>Centros con Necesidades Críticas</div>
-            <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 10, marginTop: 4 }}>
-              Fuente: ayudaencamino.com · {orgs.length} organizaciones · {orgs.reduce((s, g) => s + g.needs.length, 0)} items urgentes
-            </div>
+          {/* Flag stripe */}
+          <div style={{ display: 'flex', height: 8 }}>
+            <div style={{ flex: 1, backgroundColor: YELLOW }} />
+            <div style={{ flex: 1, backgroundColor: BLUE }} />
+            <div style={{ flex: 1, backgroundColor: RED }} />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 9 }}>Generado el</div>
-            <div style={{ color: '#ffffff', fontSize: 10, fontWeight: 700 }}>{generatedAt}</div>
-            <div style={{ display: 'flex', marginTop: 6, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, padding: '3px 10px' }}>
-              <div style={{ color: '#ffffff', fontSize: 10, fontWeight: 600 }}>{page} / {totalPages}</div>
-            </div>
-          </div>
-        </div>
 
-        {/* Column headers */}
-        <div style={{ display: 'flex', flexDirection: 'row', height: COL_HEADER_H, backgroundColor: DARK, paddingLeft: 40 }}>
-          {COLS.map(col => (
-            <div
-              key={col.key}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                width: col.w,
-                paddingLeft: 8,
-                borderRight: '1px solid #374151',
-              }}
-            >
-              <div style={{ color: YELLOW, fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                {col.label}
+          {/* Header */}
+          <div style={{ display: 'flex', flexDirection: 'row', backgroundColor: BLUE, padding: '10px 40px', height: HEADER_H - 8, alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <div style={{ color: YELLOW, fontSize: 12, fontWeight: 900 }}>Levantando a Venezuela · Coordinacion de Voluntarios</div>
+              <div style={{ color: '#ffffff', fontSize: 20, fontWeight: 900, marginTop: 2 }}>Centros con Necesidades Criticas</div>
+              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 9.5, marginTop: 3 }}>
+                Fuente: ayudaencamino.com · {orgs.length} organizaciones · {totalNeeds} items urgentes
               </div>
             </div>
-          ))}
-        </div>
-
-        {/* Table rows */}
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, paddingLeft: 40 }}>
-          {pageOrgs.map((g, i) => (
-            <OrgRow key={g.org.id} g={g} rowH={rowH} shade={i % 2 === 1} />
-          ))}
-          {/* Fill remaining rows if less than perPage */}
-          {pageOrgs.length < perPage && (
-            <div style={{ display: 'flex', flex: 1, backgroundColor: '#FAFAFA' }} />
-          )}
-        </div>
-
-        {/* Footer */}
-        <div style={{ display: 'flex', height: FOOTER_H, backgroundColor: '#1F2937', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9 }}>
-            levantandoavenezuela.vercel.app · Datos verificados de ayudaencamino.com · Urgencia CRÍTICA únicamente
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 8.5 }}>Generado el</div>
+              <div style={{ color: '#ffffff', fontSize: 9.5, fontWeight: 700 }}>{generatedAt}</div>
+              <div style={{ display: 'flex', marginTop: 5, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, padding: '2px 10px' }}>
+                <div style={{ color: '#ffffff', fontSize: 9.5, fontWeight: 700 }}>{page} / {totalPages}</div>
+              </div>
+            </div>
           </div>
+
+          {/* Column headers */}
+          <div style={{ display: 'flex', flexDirection: 'row', height: COL_H, backgroundColor: DARK, paddingLeft: 40 }}>
+            {COLS.map((col, ci) => (
+              <div key={ci} style={{ display: 'flex', alignItems: 'center', width: col.w, paddingLeft: 6, borderRight: ci < COLS.length - 1 ? '1px solid #374151' : undefined }}>
+                <div style={{ color: YELLOW, fontSize: 8.5, fontWeight: 800 }}>{col.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Rows */}
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, paddingLeft: 40 }}>
+            {pageOrgs.map((g, i) => (
+              <Row key={g.orgId} g={g} rowH={rowH} shade={i % 2 === 1} idx={i} />
+            ))}
+            {pageOrgs.length < perPage && (
+              <div style={{ display: 'flex', flex: 1, backgroundColor: '#FAFAFA' }} />
+            )}
+          </div>
+
+          {/* Footer */}
+          <div style={{ display: 'flex', height: FOOTER_H, backgroundColor: '#1F2937', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 8.5 }}>
+              levantandoavenezuela.vercel.app · Datos de ayudaencamino.com · Solo urgencia CRITICA
+            </div>
+          </div>
+
         </div>
-      </div>
-    ),
-    { width: W, height: H }
-  )
+      ),
+      { width: W, height: H }
+    )
+  } catch (err) {
+    return new Response(`Error: ${String(err)}`, { status: 500, headers: { 'Content-Type': 'text/plain' } })
+  }
 }
