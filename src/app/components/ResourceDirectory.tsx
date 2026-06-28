@@ -4,6 +4,32 @@ import { useState, useMemo } from 'react'
 import type { Category, Resource } from '@/lib/supabase'
 import ResourceCard from './ResourceCard'
 
+function norm(s: string) {
+  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+}
+
+const FILTERS = [
+  {
+    label: 'Reportes',
+    test: (name: string) => norm(name).startsWith('reporte'),
+  },
+  {
+    label: 'Profesionales',
+    test: (name: string) => norm(name).startsWith('profesional'),
+  },
+  {
+    label: 'Coordinacion',
+    test: (name: string) => norm(name).startsWith('coordinac'),
+  },
+  {
+    label: 'Informacion',
+    test: (name: string) =>
+      !norm(name).startsWith('reporte') &&
+      !norm(name).startsWith('profesional') &&
+      !norm(name).startsWith('coordinac'),
+  },
+]
+
 export default function ResourceDirectory({
   categories,
   resources,
@@ -12,6 +38,13 @@ export default function ResourceDirectory({
   resources: Resource[]
 }) {
   const [search, setSearch] = useState('')
+  const [activeFilter, setActiveFilter] = useState<string | null>(null)
+
+  const visibleCategories = useMemo(() => {
+    if (!activeFilter) return categories
+    const tab = FILTERS.find(f => f.label === activeFilter)
+    return tab ? categories.filter(cat => tab.test(cat.name)) : categories
+  }, [categories, activeFilter])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -25,24 +58,47 @@ export default function ResourceDirectory({
 
   const grouped = useMemo(
     () =>
-      categories
+      visibleCategories
         .map(cat => ({
           category: cat,
           resources: filtered.filter(r => r.category_id === cat.id),
         }))
         .filter(g => g.resources.length > 0),
-    [categories, filtered]
+    [visibleCategories, filtered]
   )
 
   const uncategorized = useMemo(
-    () => filtered.filter(r => !categories.some(cat => cat.id === r.category_id)),
-    [filtered, categories]
+    () =>
+      !activeFilter
+        ? filtered.filter(r => !categories.some(cat => cat.id === r.category_id))
+        : [],
+    [filtered, categories, activeFilter]
   )
 
   const hasAny = grouped.length > 0 || uncategorized.length > 0
 
   return (
     <div>
+      {/* Filter tabs */}
+      <div className="flex flex-wrap gap-2 mb-5">
+        {FILTERS.map(f => {
+          const isActive = activeFilter === f.label
+          return (
+            <button
+              key={f.label}
+              onClick={() => setActiveFilter(isActive ? null : f.label)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                isActive
+                  ? 'bg-blue-600 border-blue-600 text-white'
+                  : 'bg-white border-gray-200 text-gray-600 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200'
+              }`}
+            >
+              {f.label}
+            </button>
+          )
+        })}
+      </div>
+
       {/* Search */}
       <div className="mb-6">
         <input
@@ -71,7 +127,11 @@ export default function ResourceDirectory({
 
       {!hasAny ? (
         <p className="text-center py-20 text-gray-400">
-          {search ? 'Sin resultados para esa búsqueda.' : 'No hay recursos aún.'}
+          {search
+            ? 'Sin resultados para esa búsqueda.'
+            : activeFilter
+            ? `No hay recursos en "${activeFilter}" aún.`
+            : 'No hay recursos aún.'}
         </p>
       ) : (
         <div className="space-y-10">
