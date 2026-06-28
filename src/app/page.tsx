@@ -1,10 +1,11 @@
 import { supabase } from '@/lib/supabase'
 import LandingDashboard from './components/LandingDashboard'
+import SummaryBanner from './components/SummaryBanner'
 
-export const revalidate = 60
+export const revalidate = 300
 
 export default async function LandingPage() {
-  const [{ count: resourceCount }, { count: foundationCount }] = await Promise.all([
+  const [{ count: resourceCount }, { count: foundationCount }, { data: latestSummary }] = await Promise.all([
     supabase
       .from('resources')
       .select('*', { count: 'exact', head: true })
@@ -13,6 +14,12 @@ export default async function LandingPage() {
       .from('foundations')
       .select('*', { count: 'exact', head: true })
       .eq('accepts_international', true),
+    supabase
+      .from('daily_summary')
+      .select('mega_synthesis, created_at')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single(),
   ])
 
   const counts = {
@@ -23,6 +30,14 @@ export default async function LandingPage() {
 
   return (
     <div>
+      {/* Summary banner — only shown once daily_summary has data */}
+      {latestSummary?.mega_synthesis && (
+        <SummaryBanner
+          megaSynthesis={latestSummary.mega_synthesis}
+          createdAt={latestSummary.created_at}
+        />
+      )}
+
       {/* Banner de emergencia */}
       <div className="bg-[#CF0921] text-white rounded-xl text-center text-sm py-3 px-4 mb-10 flex items-center justify-center gap-2.5">
         <span className="w-2 h-2 bg-white rounded-full animate-pulse shrink-0" />

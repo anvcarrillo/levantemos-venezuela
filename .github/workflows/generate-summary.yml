@@ -1,0 +1,20 @@
+name: Generate Summary
+
+on:
+  schedule:
+    # Runs at 06:00, 12:00, 18:00, and 00:00 UTC (adjust to VET = UTC-4 if needed)
+    - cron: '0 6,12,18,0 * * *'
+  workflow_dispatch: # allows manual trigger from GitHub Actions UI
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger summary generation
+        run: |
+          curl -X POST "${{ secrets.APP_URL }}/api/generate-summary" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            --fail \
+            --silent \
+            --show-error \
+            --max-time 120
