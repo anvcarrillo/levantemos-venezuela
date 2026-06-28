@@ -10,7 +10,7 @@ const SECTIONS = [
 
 export default async function DesaparecidosPage() {
   const { data: cats } = await supabase
-    .from('categories')
+    .from('resources_categories')
     .select('id, slug, name')
     .in('slug', ['personas-desaparecidas', 'personas-encontradas'])
 
@@ -22,7 +22,7 @@ export default async function DesaparecidosPage() {
   const { data: resources } = catIds.length
     ? await supabase
         .from('resources')
-        .select('*, category:categories(id, slug, name)')
+        .select('*, category:resources_categories(id, slug, name)')
         .in('category_id', catIds)
         .not('status', 'eq', 'inactive')
         .order('updated_at', { ascending: false })

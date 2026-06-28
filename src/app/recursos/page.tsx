@@ -6,7 +6,7 @@ export const revalidate = 0
 
 export default async function RecursosPage() {
   const [{ data: categories }, { data: resources }] = await Promise.all([
-    supabase.from('categories').select('*').order('name'),
+    supabase.from('resources_categories').select('*').order('name'),
     supabase
       .from('resources')
       .select('*')

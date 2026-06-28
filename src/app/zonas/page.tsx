@@ -11,7 +11,7 @@ const ZONE_SECTIONS = [
 
 export default async function ZonasPage() {
   const { data: cats } = await supabase
-    .from('categories')
+    .from('resources_categories')
     .select('id, slug, name')
     .eq('slug', 'refugio-vivienda')
 
