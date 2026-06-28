@@ -57,7 +57,7 @@ const SECTIONS = [
     href: '/desaparecidos',
     description: 'Personas reportadas como desaparecidas o encontradas tras el terremoto. Información actualizada por la comunidad.',
     color: 'red' as const,
-    countKey: 'missing',
+    countKey: null,
   },
   {
     icon: '💡',

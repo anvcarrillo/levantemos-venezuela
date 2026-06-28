@@ -4,11 +4,7 @@ import LandingDashboard from './components/LandingDashboard'
 export const revalidate = 60
 
 export default async function LandingPage() {
-  const [
-    { count: resourceCount },
-    { count: foundationCount },
-    { data: missingCats },
-  ] = await Promise.all([
+  const [{ count: resourceCount }, { count: foundationCount }] = await Promise.all([
     supabase
       .from('resources')
       .select('*', { count: 'exact', head: true })
@@ -17,25 +13,12 @@ export default async function LandingPage() {
       .from('foundations')
       .select('*', { count: 'exact', head: true })
       .eq('accepts_international', true),
-    supabase
-      .from('resources_categories')
-      .select('id')
-      .in('slug', ['personas-desaparecidas', 'personas-encontradas']),
   ])
-
-  const missingCatIds = (missingCats ?? []).map(c => c.id)
-  const { count: missingCount } = missingCatIds.length
-    ? await supabase
-        .from('resources')
-        .select('*', { count: 'exact', head: true })
-        .in('category_id', missingCatIds)
-        .or('status.eq.active,status.is.null')
-    : { count: 0 }
 
   const counts = {
     resources: resourceCount ?? 0,
     foundations: foundationCount ?? 0,
-    missing: missingCount ?? 0,
+    missing: 0,
   }
 
   return (
@@ -71,12 +54,6 @@ export default async function LandingPage() {
           <StatPill value={counts.resources} label="recursos" color="blue" />
           <div className="w-px h-10 bg-gray-200" />
           <StatPill value={counts.foundations} label="fundaciones" color="green" />
-          {counts.missing > 0 && (
-            <>
-              <div className="w-px h-10 bg-gray-200" />
-              <StatPill value={counts.missing} label="reportes" color="red" />
-            </>
-          )}
         </div>
       </div>
 
