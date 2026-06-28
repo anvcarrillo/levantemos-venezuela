@@ -171,7 +171,7 @@ export default function SummaryBanner({
         {[1, 2].map(page => (
           <a
             key={page}
-            href={`/api/instagram-image?page=${page}`}
+            href={`/api/summary-image?format=instagram&page=${page}`}
             download={`coordinacion-centros-instagram-${page}.png`}
             target="_blank"
             rel="noopener noreferrer"
