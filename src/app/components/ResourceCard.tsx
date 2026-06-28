@@ -107,7 +107,7 @@ export default function ResourceCard({
       {isTop && (
         <div className="mb-2">
           <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-[#722F37] text-white font-semibold">
-            <span className="text-[#FCD116]">★</span> Más votado
+            <span className="text-[#FCD116]">★</span> Valorado
           </span>
         </div>
       )}
