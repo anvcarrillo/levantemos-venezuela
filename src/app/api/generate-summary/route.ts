@@ -7,128 +7,125 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// ─── RedAyuda structured API handler ─────────────────────────────────────────
+// ─── AyudaEnCamino API ────────────────────────────────────────────────────────
 
-type RedAyudaRecord = {
-  id: string
-  kind: string
-  category: string
-  title: string
-  description: string
-  city: string | null
-  state: string | null
-  area: string | null
-  contact: string | null
+type AyudaEnCaminoNeed = {
+  id: number
+  orgId: number
+  nombreArticulo: string
+  categoria: string
+  descripcion: string
+  cantidadNecesaria: number
+  cantidadComprometida: number
+  cantidadCumplida: number
+  urgencia: string
   status: string
-  meta: {
-    urgencia?: string
-    cantidadNecesaria?: number
-    cantidadComprometida?: number
-    organizacion?: string
-    verificada?: boolean
-  } | null
-  created_at: string
-  source: string
+  createdAt: string
+  updatedAt: string
+  organizacion: {
+    id: number
+    nombre: string
+    tipo: string
+    estado: string
+    ciudad: string
+    direccion: string
+    contactoNombre: string | null
+    contactoTelefono: string | null
+    contactoEmail: string | null
+    verificada: boolean
+  }
 }
 
-const URGENCY_ORDER: Record<string, number> = { alta: 0, media: 1, baja: 2 }
+const FETCH_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+  'Accept': 'application/json, */*',
+  'Accept-Language': 'es-VE,es;q=0.9',
+  'Referer': 'https://ayudaencamino.com/organizaciones',
+}
 
-async function fetchRedAyudaBlock(): Promise<{ block: string; status: string }> {
+async function fetchAyudaEnCaminoBlock(): Promise<{ block: string; status: string }> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), 15000)
+
   try {
-    const res = await fetch('https://redayudavenezuela.com/api/data', {
-      cache: 'no-store',
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-        'Accept': 'application/json, */*',
-        'Accept-Language': 'es-VE,es;q=0.9',
-      },
-    })
+    const [activaRes, parcialRes] = await Promise.allSettled([
+      fetch('https://ayudaencamino.com/api/needs?urgencia=critica&status=activa', {
+        cache: 'no-store', signal: controller.signal, headers: FETCH_HEADERS,
+      }),
+      fetch('https://ayudaencamino.com/api/needs?urgencia=critica&status=parcial', {
+        cache: 'no-store', signal: controller.signal, headers: FETCH_HEADERS,
+      }),
+    ])
     clearTimeout(timer)
 
-    if (!res.ok) return { block: '', status: `http_${res.status}` }
-
-    const json = await res.json()
-    const all: RedAyudaRecord[] = Array.isArray(json) ? json : (json.data ?? [])
-    const active = all.filter(r => r.status === 'activo' && r.kind === 'necesidad')
-
-    if (!active.length) return { block: '', status: 'empty' }
-
-    // Group by zone (area + city + state)
-    const byZone = new Map<string, RedAyudaRecord[]>()
-    for (const item of active) {
-      const zone = [item.area, item.city, item.state].filter(Boolean).join(', ') || 'Zona no especificada'
-      if (!byZone.has(zone)) byZone.set(zone, [])
-      byZone.get(zone)!.push(item)
+    const all: AyudaEnCaminoNeed[] = []
+    if (activaRes.status === 'fulfilled' && activaRes.value.ok) {
+      all.push(...(await activaRes.value.json() as AyudaEnCaminoNeed[]))
+    }
+    if (parcialRes.status === 'fulfilled' && parcialRes.value.ok) {
+      all.push(...(await parcialRes.value.json() as AyudaEnCaminoNeed[]))
     }
 
+    if (!all.length) return { block: '', status: 'empty' }
+
+    // Deduplicate by id
+    const seen = new Set<number>()
+    const unique = all.filter(r => { if (seen.has(r.id)) return false; seen.add(r.id); return true })
+
+    // Group by organization
+    const byOrg = new Map<number, { org: AyudaEnCaminoNeed['organizacion']; needs: AyudaEnCaminoNeed[] }>()
+    for (const need of unique) {
+      if (!byOrg.has(need.orgId)) byOrg.set(need.orgId, { org: need.organizacion, needs: [] })
+      byOrg.get(need.orgId)!.needs.push(need)
+    }
+
+    // Sort orgs by critical item count descending
+    const sortedOrgs = [...byOrg.values()].sort((a, b) => b.needs.length - a.needs.length)
+
     const lines: string[] = [
-      `=== NECESIDADES ACTIVAS — redayudavenezuela.com (${active.length} registros) ===`,
+      `=== NECESIDADES CRÍTICAS — ayudaencamino.com (${unique.length} items · ${sortedOrgs.length} organizaciones) ===`,
       '',
     ]
 
-    // Sort zones by number of alta-urgency items descending
-    const sortedZones = [...byZone.entries()].sort(([, a], [, b]) => {
-      const altaA = a.filter(r => r.meta?.urgencia === 'alta').length
-      const altaB = b.filter(r => r.meta?.urgencia === 'alta').length
-      return altaB - altaA
-    })
+    for (const { org, needs } of sortedOrgs) {
+      const tipo = org.tipo.replace(/_/g, ' ')
+      lines.push(`📍 ${org.nombre} [${tipo}]${org.verificada ? ' ✓verificada' : ''}`)
+      lines.push(`   Dirección: ${org.direccion} · ${org.ciudad}, ${org.estado}`)
+      const contacto = [org.contactoNombre, org.contactoTelefono].filter(Boolean).join(' · ')
+      if (contacto) lines.push(`   Contacto: ${contacto}`)
+      lines.push(`   Necesidades (urgencia crítica):`)
 
-    for (const [zone, items] of sortedZones) {
-      lines.push(`📍 ZONA: ${zone}`)
-
-      // Sort by urgency within zone
-      const sorted = [...items].sort((a, b) => {
-        const ua = URGENCY_ORDER[a.meta?.urgencia ?? ''] ?? 2
-        const ub = URGENCY_ORDER[b.meta?.urgencia ?? ''] ?? 2
-        return ua - ub
-      })
-
-      for (const item of sorted.slice(0, 10)) {
-        const urgencia = item.meta?.urgencia?.toUpperCase() ?? 'N/A'
-        const needed = item.meta?.cantidadNecesaria ?? null
-        const committed = item.meta?.cantidadComprometida ?? 0
-        const remaining = needed !== null ? needed - committed : null
-        const qtyStr = remaining !== null ? `necesita ${remaining} de ${needed}` : ''
-        const org = item.meta?.organizacion ? `| Org: ${item.meta.organizacion}` : ''
-        const contact = item.contact ? `| Contacto: ${item.contact}` : ''
-        const verified = item.meta?.verificada ? '✓' : ''
-
-        lines.push(
-          `  [${urgencia}]${verified} ${item.title}${qtyStr ? ` (${qtyStr})` : ''} ${org} ${contact}`.trimEnd()
-        )
+      for (const need of needs) {
+        const remaining = need.cantidadNecesaria - need.cantidadComprometida - need.cantidadCumplida
+        const tag = need.status === 'parcial' ? 'PARCIAL' : 'ACTIVA'
+        const desc = need.descripcion ? ` — ${need.descripcion}` : ''
+        lines.push(`   • [${tag}] ${need.nombreArticulo}: ${remaining} pendientes de ${need.cantidadNecesaria}${desc}`)
       }
-
-      if (items.length > 10) lines.push(`  ... y ${items.length - 10} necesidades más en esta zona`)
       lines.push('')
     }
 
-    return { block: lines.join('\n').slice(0, 5000), status: `ok_${active.length}` }
+    return { block: lines.join('\n').slice(0, 7000), status: `ok_${unique.length}_items` }
   } catch (err) {
     clearTimeout(timer)
-    const msg = err instanceof Error ? err.message : String(err)
-    return { block: '', status: `error_${msg.slice(0, 60)}` }
+    return { block: '', status: `error_${String(err).slice(0, 80)}` }
   }
 }
 
 // ─── Generic HTML scraper ─────────────────────────────────────────────────────
 
-const UNSCRAPEBLE_PATTERNS = [
+const UNSCRAPEBLE_DOMAINS = [
   'wa.me', 'whatsapp.com', 'instagram.com', 'facebook.com',
   't.me', 'twitter.com', 'x.com', 'tiktok.com', 'youtube.com',
   'docs.google.com', 'forms.gle', 'bit.ly', 'linktr.ee',
-  'redayudavenezuela.com', // handled separately via API
+  'ayudaencamino.com',    // handled via API above
+  'redayudavenezuela.com', // handled via API when available
 ]
 
 function isUnscrapeableUrl(url: string): boolean {
   try {
     const host = new URL(url).hostname.replace('www.', '')
-    return UNSCRAPEBLE_PATTERNS.some(p => host.includes(p))
-  } catch {
-    return true
-  }
+    return UNSCRAPEBLE_DOMAINS.some(p => host.includes(p))
+  } catch { return true }
 }
 
 function isJsShell(text: string): boolean {
@@ -143,15 +140,18 @@ async function scrapeUrl(url: string): Promise<{ content: string; status: 'ok' |
   if (isUnscrapeableUrl(url)) return { content: '', status: 'unscrapeble' }
 
   try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 9000)
     const res = await fetch(url, {
+      signal: controller.signal,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'es-VE,es;q=0.9,en;q=0.8',
         'Cache-Control': 'no-cache',
       },
-      signal: AbortSignal.timeout(9000),
     })
+    clearTimeout(timer)
 
     if (res.status === 403 || res.status === 429 || res.status === 401) return { content: '', status: 'blocked' }
     if (!res.ok) return { content: '', status: 'error' }
@@ -182,14 +182,9 @@ type RawResource = {
 }
 
 type Category = { id: number; name: string; slug: string }
+type CategoryGroup = { name: string; slug: string; resources: RawResource[] }
 
-type CategoryGroup = {
-  name: string
-  slug: string
-  resources: RawResource[]
-}
-
-// ─── Route handler ────────────────────────────────────────────────────────────
+// ─── Route ───────────────────────────────────────────────────────────────────
 
 export async function POST(request: Request) {
   const authHeader = request.headers.get('authorization')
@@ -197,18 +192,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // 1. Pre-fetch RedAyuda API in parallel with Supabase queries
-  const [{ block: redAyudaBlock, status: redAyudaStatus }, { data: resources, error: resError }, { data: categories, error: catError }] =
-    await Promise.all([
-      fetchRedAyudaBlock(),
-      supabaseAdmin
-        .from('resources')
-        .select('url, title, description, category_id, upvotes')
-        .or('status.eq.active,status.is.null')
-        .order('upvotes', { ascending: false, nullsFirst: false })
-        .limit(100),
-      supabaseAdmin.from('resources_categories').select('id, name, slug'),
-    ])
+  // 1. Parallel: AyudaEnCamino API + Supabase resources + categories
+  const [
+    { block: ayudaBlock, status: ayudaStatus },
+    { data: resources, error: resError },
+    { data: categories, error: catError },
+  ] = await Promise.all([
+    fetchAyudaEnCaminoBlock(),
+    supabaseAdmin
+      .from('resources')
+      .select('url, title, description, category_id, upvotes')
+      .or('status.eq.active,status.is.null')
+      .order('upvotes', { ascending: false, nullsFirst: false })
+      .limit(100),
+    supabaseAdmin.from('resources_categories').select('id, name, slug'),
+  ])
 
   if (resError || catError || !resources?.length) {
     return NextResponse.json({ error: resError?.message ?? catError?.message ?? 'No resources' }, { status: 400 })
@@ -223,18 +221,14 @@ export async function POST(request: Request) {
     if (!r.category_id) continue
     const cat = catMap.get(r.category_id)
     if (!cat) continue
-    if (!grouped.has(r.category_id)) {
-      grouped.set(r.category_id, { name: cat.name, slug: cat.slug, resources: [] })
-    }
+    if (!grouped.has(r.category_id)) grouped.set(r.category_id, { name: cat.name, slug: cat.slug, resources: [] })
     const group = grouped.get(r.category_id)!
     if (group.resources.length < 5) group.resources.push(r)
   }
 
-  if (grouped.size === 0) {
-    return NextResponse.json({ error: 'No categorized resources' }, { status: 400 })
-  }
+  if (grouped.size === 0) return NextResponse.json({ error: 'No categorized resources' }, { status: 400 })
 
-  // 3. Scrape HTML URLs in parallel
+  // 3. Scrape generic HTML URLs in parallel (excludes ayudaencamino.com / social)
   const allResources = [...grouped.values()].flatMap(g => g.resources)
   const scrapeResults = await Promise.allSettled(allResources.map(r => scrapeUrl(r.url)))
   const webContent = new Map<string, { content: string; status: string }>()
@@ -247,10 +241,18 @@ export async function POST(request: Request) {
   const sections: string[] = []
   for (const [, group] of grouped) {
     let section = `### CATEGORÍA: ${group.name} (slug: ${group.slug})\n`
+
+    // Inject structured AyudaEnCamino data for the volunteer coordination category
+    if (group.slug === 'coordinacion-voluntarios' && ayudaBlock) {
+      section += '\n' + ayudaBlock + '\n'
+    }
+
     for (const r of group.resources) {
+      // Skip ayudaencamino URLs — already handled via API block above
+      if (r.url.includes('ayudaencamino.com')) continue
+
       const scraped = webContent.get(r.url) ?? { content: '', status: 'error' }
       const votes = r.upvotes ?? 0
-
       section += `\n[Recurso${votes > 0 ? ` — ${votes} votos` : ''}]\n`
       section += `Título: ${r.title ?? r.url}\nURL: ${r.url}\n`
       if (r.description) section += `Descripción: ${r.description}\n`
@@ -258,15 +260,11 @@ export async function POST(request: Request) {
       if (scraped.status === 'ok' && scraped.content) {
         section += `Contenido extraído:\n${scraped.content}\n`
       } else if (scraped.status === 'unscrapeble') {
-        section += `[Enlace directo — no se puede extraer contenido automáticamente]\n`
-        // Inject RedAyuda structured data for that domain
-        if (r.url.includes('redayudavenezuela.com') && redAyudaBlock) {
-          section += redAyudaBlock + '\n'
-        }
+        section += `[Enlace directo sin contenido extraíble — redes sociales/WhatsApp]\n`
       } else if (scraped.status === 'js-shell') {
-        section += `[App JavaScript — contenido cargado dinámicamente, no disponible para scraping]\n`
+        section += `[Aplicación JavaScript — contenido no disponible para scraping]\n`
       } else if (scraped.status === 'blocked') {
-        section += `[Sitio bloqueó el acceso — usar solo título y descripción]\n`
+        section += `[Sitio bloqueó el acceso automático]\n`
       }
     }
     sections.push(section)
@@ -285,31 +283,30 @@ export async function POST(request: Request) {
         role: 'user',
         content: `Eres un analista de crisis humanitaria para el terremoto en Venezuela 2025.
 
-Analiza los recursos por categoría. Cuando encuentres datos de "redayudavenezuela.com" (formato estructurado con zonas, cantidades y contactos), úsalos como fuente primaria — son datos verificados y específicos.
+Analiza los recursos organizados por categoría. Para "Coordinación de Voluntarios" tendrás datos estructurados de ayudaencamino.com con organizaciones verificadas, direcciones exactas, contactos y cantidades pendientes — úsalos como fuente primaria y sé muy específico.
 
-INSTRUCCIONES DE ANÁLISIS:
-- Zonas: nombres exactos (barrio, municipio, estado) — "Centro Plaza, Altamira, Caracas" no "Caracas"
-- Materiales: artículo + cantidad pendiente si disponible — "Cuerdas de rapel: 3 unidades (Edif. Petunia)"
-- Warnings: riesgos reales mencionados, urgencias altas sin cubrir
-- Tips: contactos con número de teléfono si existen, pasos de acción concretos
+REGLAS:
+- Zonas: nombres exactos con dirección si está disponible (ej: "Hospital Pérez Carreño, La Yaguara, Caracas")
+- Materiales: artículo + cantidad pendiente + organización (ej: "Dermalon 3-0: 10 unidades — Tu Protocolo Venezuela")
+- Warnings: necesidades críticas sin cubrir (status ACTIVA = sin ningún compromiso aún)
+- Tips: contacto directo con teléfono si existe (ej: "Contactar a Katerine Falcon · 04244948304")
+- Si una categoría no tiene datos concretos para un campo, usa []
+- No inventes nada — solo usa lo que está en los datos
 
-Prioriza siempre urgencia "ALTA" sobre "MEDIA" o "BAJA".
-Si no hay datos concretos para un campo, usa []. No inventes nada.
-
-Responde ÚNICAMENTE JSON (sin bloques de código):
+Responde ÚNICAMENTE JSON válido (sin bloques de código):
 {
   "mega_synthesis": "2-3 frases con zonas y necesidades específicas más urgentes ahora mismo",
   "category_summaries": [
     {
       "category": "nombre exacto de la categoría",
       "slug": "slug-categoria",
-      "zones": ["Zona exacta — qué ocurre o qué se necesita ahí"],
-      "materials": ["Artículo específico con cantidad y organización si disponible"],
-      "warnings": ["Advertencia concreta con zona y contexto"],
-      "tips": ["Acción concreta: qué hacer, número de contacto, dónde ir"]
+      "zones": ["Nombre org/lugar — dirección exacta o barrio/municipio/estado"],
+      "materials": ["Artículo: cantidad pendiente — Organización (si disponible)"],
+      "warnings": ["Necesidad crítica urgente sin cubrir, con contexto de zona"],
+      "tips": ["Acción concreta: nombre de contacto · teléfono o instrucción específica"]
     }
   ],
-  "conclusions": "3-4 oraciones: zonas más críticas identificadas hoy, tipos de ayuda más urgentes, prioridades de acción"
+  "conclusions": "3-4 oraciones: organizaciones más críticas identificadas hoy, tipos de ayuda más urgentes, dónde ir o a quién contactar"
 }
 
 RECURSOS POR CATEGORÍA:
@@ -319,26 +316,14 @@ ${resourcesBlock}`,
   })
 
   // 6. Parse
-  type CategorySummary = {
-    category: string
-    slug: string
-    zones: string[]
-    materials: string[]
-    warnings: string[]
-    tips: string[]
-  }
-
+  type CategorySummary = { category: string; slug: string; zones: string[]; materials: string[]; warnings: string[]; tips: string[] }
   let parsed: { mega_synthesis: string; category_summaries: CategorySummary[]; conclusions: string }
 
   try {
     const raw = (message.content[0] as { type: string; text: string }).text
     parsed = JSON.parse(raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim())
   } catch {
-    parsed = {
-      mega_synthesis: 'Análisis generado automáticamente.',
-      category_summaries: [],
-      conclusions: 'No se pudo estructurar el análisis.',
-    }
+    parsed = { mega_synthesis: 'Análisis generado automáticamente.', category_summaries: [], conclusions: 'No se pudo estructurar el análisis.' }
   }
 
   // 7. Save
@@ -354,14 +339,12 @@ ${resourcesBlock}`,
     .select()
     .single()
 
-  if (insertError) {
-    return NextResponse.json({ error: insertError.message }, { status: 500 })
-  }
+  if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })
 
   return NextResponse.json({
     success: true,
     id: data.id,
     categories_analyzed: parsed.category_summaries.length,
-    redayuda_status: redAyudaStatus,
+    ayuda_status: ayudaStatus,
   })
 }
