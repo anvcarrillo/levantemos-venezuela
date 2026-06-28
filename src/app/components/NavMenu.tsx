@@ -53,11 +53,11 @@ export default function NavMenu({
         <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden py-1">
 
           {/* Recursos & Apps */}
-          <Link href="/" onClick={close} className="flex items-center gap-2 px-4 py-2.5 font-medium text-sm text-gray-900 hover:bg-gray-50">
+          <Link href="/recursos" onClick={close} className="flex items-center gap-2 px-4 py-2.5 font-medium text-sm text-gray-900 hover:bg-gray-50">
             <span>📋</span> Recursos & Apps
           </Link>
           {categories.map(cat => (
-            <Link key={cat.id} href={`/#${cat.slug}`} onClick={close}
+            <Link key={cat.id} href={`/recursos#${cat.slug}`} onClick={close}
               className="flex pl-10 pr-4 py-1.5 text-xs text-gray-500 hover:bg-blue-50 hover:text-blue-700">
               {cat.name}
             </Link>
