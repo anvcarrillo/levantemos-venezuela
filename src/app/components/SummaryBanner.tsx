@@ -163,21 +163,43 @@ export default function SummaryBanner({
         </>
       )}
 
-      {/* Download button */}
-      <div className="px-5 py-3 border-t border-gray-100 flex justify-end">
+      {/* Download buttons */}
+      <div className="px-5 py-3 border-t border-gray-100 flex flex-wrap items-center gap-2 justify-end">
+        <span className="text-[10px] text-gray-400 mr-auto">Descargar infografía</span>
+
+        {/* Instagram slides */}
+        {[1, 2].map(page => (
+          <a
+            key={page}
+            href={`/api/instagram-image?page=${page}`}
+            download={`coordinacion-centros-instagram-${page}.png`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 border border-pink-400 text-pink-600 text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-pink-50 transition-colors"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+              <circle cx="12" cy="12" r="4"/>
+              <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor"/>
+            </svg>
+            Centros · {page}/2
+          </a>
+        ))}
+
+        {/* General summary */}
         <a
           href="/api/summary-image"
           download="resumen-levantando-venezuela.png"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 bg-[#003DA5] text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-blue-800 transition-colors"
+          className="inline-flex items-center gap-1.5 bg-[#003DA5] text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-blue-800 transition-colors"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
             <polyline points="7 10 12 15 17 10" />
             <line x1="12" y1="15" x2="12" y2="3" />
           </svg>
-          Descargar resumen para compartir
+          Resumen general
         </a>
       </div>
     </div>
