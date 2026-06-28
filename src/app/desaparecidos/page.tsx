@@ -24,7 +24,7 @@ export default async function DesaparecidosPage() {
         .from('resources')
         .select('*, category:categories(id, slug, name)')
         .in('category_id', catIds)
-        .or('status.eq.active,status.is.null')
+        .not('status', 'eq', 'inactive')
         .order('updated_at', { ascending: false })
     : { data: [] }
 

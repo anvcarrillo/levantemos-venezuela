@@ -10,13 +10,11 @@ export default async function RecursosPage() {
     supabase
       .from('resources')
       .select('*')
-      .or('status.eq.active,status.is.null')
-      .order('upvotes', { ascending: false })
       .order('updated_at', { ascending: false }),
   ])
 
   const cats = categories ?? []
-  const res = resources ?? []
+  const res = (resources ?? []).filter(r => r.status !== 'inactive')
 
   return (
     <div>
