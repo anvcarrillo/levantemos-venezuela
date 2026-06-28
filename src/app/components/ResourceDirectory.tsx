@@ -34,6 +34,13 @@ export default function ResourceDirectory({
     [categories, filtered]
   )
 
+  const uncategorized = useMemo(
+    () => filtered.filter(r => !categories.some(cat => cat.id === r.category_id)),
+    [filtered, categories]
+  )
+
+  const hasAny = grouped.length > 0 || uncategorized.length > 0
+
   return (
     <div>
       {/* Search */}
@@ -62,7 +69,7 @@ export default function ResourceDirectory({
         </div>
       )}
 
-      {grouped.length === 0 ? (
+      {!hasAny ? (
         <p className="text-center py-20 text-gray-400">
           {search ? 'Sin resultados para esa búsqueda.' : 'No hay recursos aún.'}
         </p>
@@ -80,6 +87,19 @@ export default function ResourceDirectory({
               </div>
             </section>
           ))}
+
+          {uncategorized.length > 0 && (
+            <section id="sin-categoria" className="scroll-mt-20">
+              <h2 className="text-base font-semibold text-gray-700 uppercase tracking-wide mb-3 pb-2 border-b border-gray-200">
+                Recursos
+              </h2>
+              <div className="space-y-2">
+                {uncategorized.map(resource => (
+                  <ResourceCard key={resource.id} resource={resource} />
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       )}
     </div>
