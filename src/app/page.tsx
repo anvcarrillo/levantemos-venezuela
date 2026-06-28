@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase'
 import LandingDashboard from './components/LandingDashboard'
 import SummaryBanner from './components/SummaryBanner'
 
-export const revalidate = 300
+export const revalidate = 60
 
 export default async function LandingPage() {
   const [{ count: resourceCount }, { count: foundationCount }, { data: latestSummary }] = await Promise.all([
