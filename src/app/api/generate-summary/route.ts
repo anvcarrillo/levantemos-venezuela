@@ -348,7 +348,5 @@ ${resourcesBlock}`,
     id: data.id,
     categories_analyzed: parsed.category_summaries.length,
     ayuda_status: ayudaStatus,
-    debug_parse_error: parseError || null,
-    debug_claude_snippet: rawClaudeText.slice(0, 400),
   })
 }
