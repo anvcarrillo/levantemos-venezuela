@@ -6,6 +6,13 @@ export type Category = {
   slug: string
 }
 
+export type FoundationCategory = {
+  id: string
+  name: string
+  slug: string
+  created_at: string
+}
+
 export type Resource = {
   id: string
   url: string
@@ -14,6 +21,9 @@ export type Resource = {
   description: string | null
   category_id: string
   status: string | null
+  upvotes: number
+  report_count: number
+  deactivated_at: string | null
   created_at: string
   updated_at: string
   category?: Category
@@ -26,6 +36,20 @@ export type Foundation = {
   region: string | null
   donation_url: string | null
   accepts_international: boolean
+  notes: string | null
+  category_id: string | null
+  created_at: string
+  category?: FoundationCategory
+}
+
+export type Zone = {
+  id: string
+  name: string
+  type: string
+  address: string | null
+  city: string | null
+  state: string | null
+  phone: string | null
   notes: string | null
   created_at: string
 }
