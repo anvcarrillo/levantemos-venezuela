@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import type { Category, FoundationCategory, ZoneCategory } from '@/lib/supabase'
 
 export default function NavMenu({
@@ -17,6 +17,7 @@ export default function NavMenu({
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
+  const router = useRouter()
 
   useEffect(() => { setOpen(false) }, [pathname])
 
@@ -29,6 +30,15 @@ export default function NavMenu({
   }, [])
 
   const close = () => setOpen(false)
+
+  function goToHash(path: string, slug: string) {
+    close()
+    if (pathname === path) {
+      document.getElementById(slug)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    } else {
+      router.push(`${path}#${slug}`)
+    }
+  }
 
   return (
     <div ref={ref} className="relative">
@@ -53,10 +63,10 @@ export default function NavMenu({
             <span>📋</span> Recursos & Apps
           </Link>
           {categories.map(cat => (
-            <Link key={cat.id} href={`/recursos#${cat.slug}`} onClick={close}
-              className="flex pl-10 pr-4 py-1.5 text-xs text-gray-500 hover:bg-blue-50 hover:text-[#003DA5]">
+            <button key={cat.id} onClick={() => goToHash('/recursos', cat.slug)}
+              className="flex w-full pl-10 pr-4 py-1.5 text-xs text-left text-gray-500 hover:bg-blue-50 hover:text-[#003DA5]">
               {cat.name}
-            </Link>
+            </button>
           ))}
 
           <div className="my-1 border-t border-gray-100" />
@@ -66,10 +76,10 @@ export default function NavMenu({
             <span>🏛️</span> Fundaciones
           </Link>
           {foundationCategories.map(cat => (
-            <Link key={cat.id} href={`/fundaciones#${cat.slug}`} onClick={close}
-              className="flex pl-10 pr-4 py-1.5 text-xs text-gray-500 hover:bg-blue-50 hover:text-[#003DA5]">
+            <button key={cat.id} onClick={() => goToHash('/fundaciones', cat.slug)}
+              className="flex w-full pl-10 pr-4 py-1.5 text-xs text-left text-gray-500 hover:bg-blue-50 hover:text-[#003DA5]">
               {cat.name}
-            </Link>
+            </button>
           ))}
 
           <div className="my-1 border-t border-gray-100" />
@@ -85,10 +95,10 @@ export default function NavMenu({
             <span>📍</span> Zonas de Interés
           </Link>
           {zoneCategories.map(z => (
-            <Link key={z.id} href={`/zonas#${z.slug}`} onClick={close}
-              className="flex pl-10 pr-4 py-1.5 text-xs text-gray-500 hover:bg-blue-50 hover:text-[#003DA5]">
+            <button key={z.id} onClick={() => goToHash('/zonas', z.slug)}
+              className="flex w-full pl-10 pr-4 py-1.5 text-xs text-left text-gray-500 hover:bg-blue-50 hover:text-[#003DA5]">
               {z.name}
-            </Link>
+            </button>
           ))}
 
           <div className="my-1 border-t border-gray-100" />

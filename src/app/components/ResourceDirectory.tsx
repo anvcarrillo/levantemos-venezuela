@@ -59,6 +59,20 @@ export default function ResourceDirectory({
   const [search, setSearch] = useState('')
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
 
+  useEffect(() => {
+    const slug = window.location.hash.slice(1)
+    if (!slug) return
+    const tryScroll = (attempts: number) => {
+      const el = document.getElementById(slug)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      } else if (attempts > 0) {
+        setTimeout(() => tryScroll(attempts - 1), 120)
+      }
+    }
+    setTimeout(() => tryScroll(5), 150)
+  }, [])
+
   const visibleCategories = useMemo(() => {
     if (!activeFilter) return categories
     const tab = FILTERS.find(f => f.label === activeFilter)
