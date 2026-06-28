@@ -101,11 +101,11 @@ export async function GET() {
                   borderBottom: '2px solid #003DA5',
                 }}
               >
-                🙋 Voluntarios necesarios
+                Voluntarios necesarios
               </div>
               {volunteers.slice(0, 3).map((v, i) => (
                 <div key={i} style={{ display: 'flex', flexDirection: 'column', marginBottom: 10 }}>
-                  <div style={{ color: '#111827', fontWeight: 700, fontSize: 13 }}>📍 {v.zone}</div>
+                  <div style={{ color: '#111827', fontWeight: 700, fontSize: 13 }}>{v.zone}</div>
                   <div style={{ color: '#6b7280', fontSize: 12, marginTop: 2, lineHeight: 1.4 }}>{v.details}</div>
                 </div>
               ))}
@@ -129,11 +129,11 @@ export async function GET() {
                   borderBottom: '2px solid #CF0921',
                 }}
               >
-                📦 Donaciones urgentes
+                Donaciones urgentes
               </div>
               {donations.slice(0, 3).map((d, i) => (
                 <div key={i} style={{ display: 'flex', flexDirection: 'column', marginBottom: 10 }}>
-                  <div style={{ color: '#111827', fontWeight: 700, fontSize: 13 }}>📍 {d.location}</div>
+                  <div style={{ color: '#111827', fontWeight: 700, fontSize: 13 }}>{d.location}</div>
                   <div style={{ color: '#6b7280', fontSize: 12, marginTop: 2 }}>
                     {d.items?.slice(0, 4).join(' · ')}
                   </div>
