@@ -2,7 +2,17 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import type { Category, Resource } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import ResourceCard from './ResourceCard'
+
+type CategorySummary = {
+  category: string
+  slug: string
+  zones: string[]
+  materials: string[]
+  warnings: string[]
+  tips: string[]
+}
 
 function norm(s: string) {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -59,6 +69,39 @@ export default function ResourceDirectory({
   const [search, setSearch] = useState('')
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [noResults, setNoResults] = useState(false)
+  const [summaryMap, setSummaryMap] = useState<Map<string, CategorySummary>>(new Map())
+  const [summaryDate, setSummaryDate] = useState<string | null>(null)
+
+  useEffect(() => {
+    supabase
+      .from('daily_summary')
+      .select('category_summaries, created_at')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+      .then(({ data }) => {
+        if (!data?.category_summaries) return
+        const map = new Map<string, CategorySummary>()
+        for (const cs of data.category_summaries as CategorySummary[]) {
+          if (cs.zones.length || cs.materials.length || cs.warnings.length || cs.tips.length) {
+            map.set(cs.slug, cs)
+          }
+        }
+        setSummaryMap(map)
+        if (data.created_at) {
+          setSummaryDate(
+            new Date(data.created_at).toLocaleString('es-VE', {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              timeZone: 'America/Caracas',
+            })
+          )
+        }
+      })
+  }, [])
 
   // Auto-dismiss toast after 4 s
   useEffect(() => {
@@ -220,9 +263,28 @@ export default function ResourceDirectory({
             const topId = top && (top.upvotes ?? 0) > 0 ? top.id : null
             return (
               <section key={category.id} id={category.slug} className="scroll-mt-20">
-                <h2 className="text-sm font-bold text-[#003DA5] uppercase tracking-wider mb-4 pb-2 border-b-2 border-[#FCD116]">
-                  {category.name}
-                </h2>
+                <div className="flex items-center justify-between mb-4 pb-2 border-b-2 border-[#FCD116]">
+                  <h2 className="text-sm font-bold text-[#003DA5] uppercase tracking-wider">
+                    {category.name}
+                  </h2>
+                  {summaryMap.has(category.slug) && (
+                    <a
+                      href={`/api/summary-image?slug=${category.slug}`}
+                      download={`resumen-${category.slug}.png`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={`Descargar resumen de ${category.name}${summaryDate ? ` · ${summaryDate}` : ''}`}
+                      className="flex items-center gap-1.5 text-[10px] font-semibold text-[#003DA5] border border-[#003DA5]/30 rounded-full px-2.5 py-1 hover:bg-[#003DA5] hover:text-white hover:border-[#003DA5] transition-colors"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                      </svg>
+                      Resumen{summaryDate ? ` · ${summaryDate}` : ''}
+                    </a>
+                  )}
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {resources.map(resource => (
                     <ResourceCard

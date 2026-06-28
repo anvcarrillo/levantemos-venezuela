@@ -87,6 +87,15 @@ export default function SummaryBanner({
   const [ago, setAgo] = useState('')
   const [expanded, setExpanded] = useState(false)
 
+  const exactDate = new Date(createdAt).toLocaleString('es-VE', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'America/Caracas',
+  })
+
   useEffect(() => {
     setAgo(timeAgo(createdAt))
     const interval = setInterval(() => setAgo(timeAgo(createdAt)), 60000)
@@ -112,7 +121,10 @@ export default function SummaryBanner({
               ¿Qué se necesita ahora?
             </span>
           </div>
-          {ago && <span className="text-xs text-gray-400">Actualizado {ago}</span>}
+          <div className="flex flex-col items-end">
+            {ago && <span className="text-xs text-gray-400">Actualizado {ago}</span>}
+            {exactDate && <span className="text-[10px] text-gray-300">{exactDate}</span>}
+          </div>
         </div>
 
         <p className="text-gray-800 text-base leading-relaxed font-medium">{megaSynthesis}</p>
