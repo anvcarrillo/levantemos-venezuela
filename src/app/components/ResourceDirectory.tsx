@@ -213,22 +213,28 @@ export default function ResourceDirectory({
         </p>
       ) : (
         <div className="space-y-10">
-          {grouped.map(({ category, resources }) => (
-            <section key={category.id} id={category.slug} className="scroll-mt-20">
-              <h2 className="text-sm font-bold text-[#003DA5] uppercase tracking-wider mb-4 pb-2 border-b-2 border-[#FCD116]">
-                {category.name}
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {resources.map(resource => (
-                  <ResourceCard
-                    key={resource.id}
-                    resource={resource}
-                    isTop={(resource.upvotes ?? 0) > 0}
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
+          {grouped.map(({ category, resources }) => {
+            const top = resources.length > 0
+              ? resources.reduce((a, b) => (b.upvotes ?? 0) > (a.upvotes ?? 0) ? b : a)
+              : null
+            const topId = top && (top.upvotes ?? 0) > 0 ? top.id : null
+            return (
+              <section key={category.id} id={category.slug} className="scroll-mt-20">
+                <h2 className="text-sm font-bold text-[#003DA5] uppercase tracking-wider mb-4 pb-2 border-b-2 border-[#FCD116]">
+                  {category.name}
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {resources.map(resource => (
+                    <ResourceCard
+                      key={resource.id}
+                      resource={resource}
+                      isTop={resource.id === topId}
+                    />
+                  ))}
+                </div>
+              </section>
+            )
+          })}
 
           {uncategorized.length > 0 && (
             <section id="sin-categoria" className="scroll-mt-20">
