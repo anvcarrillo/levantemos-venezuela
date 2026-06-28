@@ -34,7 +34,12 @@ export default function NavMenu({
   function goToHash(path: string, slug: string) {
     close()
     if (pathname === path) {
-      document.getElementById(slug)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      const el = document.getElementById(slug)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      } else {
+        window.dispatchEvent(new CustomEvent('nav-empty-category'))
+      }
     } else {
       router.push(`${path}#${slug}`)
     }

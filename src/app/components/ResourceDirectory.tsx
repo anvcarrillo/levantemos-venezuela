@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import type { Category, Resource } from '@/lib/supabase'
 import ResourceCard from './ResourceCard'
 
@@ -58,7 +58,31 @@ export default function ResourceDirectory({
 }) {
   const [search, setSearch] = useState('')
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
+  const [noResults, setNoResults] = useState(false)
 
+  // Auto-dismiss toast after 4 s
+  useEffect(() => {
+    if (!noResults) return
+    const t = setTimeout(() => setNoResults(false), 4000)
+    return () => clearTimeout(t)
+  }, [noResults])
+
+  // Show toast when a filter is active but no groups match
+  useEffect(() => {
+    if (activeFilter !== null && grouped.length === 0 && !search.trim()) {
+      setNoResults(true)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFilter, search])
+
+  // Listen for nav clicks on categories that have no resources on this page
+  useEffect(() => {
+    function handler() { setNoResults(true) }
+    window.addEventListener('nav-empty-category', handler)
+    return () => window.removeEventListener('nav-empty-category', handler)
+  }, [])
+
+  // Scroll to hash on mount; show toast if category exists but has no resources
   useEffect(() => {
     const slug = window.location.hash.slice(1)
     if (!slug) return
@@ -68,9 +92,12 @@ export default function ResourceDirectory({
         el.scrollIntoView({ behavior: 'smooth', block: 'start' })
       } else if (attempts > 0) {
         setTimeout(() => tryScroll(attempts - 1), 120)
+      } else if (categories.some(c => c.slug === slug)) {
+        setNoResults(true)
       }
     }
     setTimeout(() => tryScroll(5), 150)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const visibleCategories = useMemo(() => {
@@ -111,7 +138,26 @@ export default function ResourceDirectory({
   const hasAny = grouped.length > 0 || uncategorized.length > 0
 
   return (
-    <div>
+    <div className="relative">
+      {/* No results toast */}
+      {noResults && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4 pointer-events-none">
+          <div className="bg-white border border-gray-200 rounded-xl shadow-xl px-4 py-3 flex items-start gap-3 pointer-events-auto">
+            <span className="text-[#CF0921] mt-0.5 shrink-0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </span>
+            <p className="text-sm text-gray-700 flex-1">No se encontraron resultados para el tipo de recurso seleccionado.</p>
+            <button onClick={() => setNoResults(false)} className="text-gray-400 hover:text-gray-600 shrink-0 mt-0.5">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Filter tabs */}
       <div className="flex flex-wrap gap-2 mb-5">
         {FILTERS.map(f => {
@@ -120,7 +166,7 @@ export default function ResourceDirectory({
           return (
             <button
               key={f.label}
-              onClick={() => setActiveFilter(isActive ? null : f.label)}
+              onClick={() => { setNoResults(false); setActiveFilter(isActive ? null : f.label) }}
               className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${
                 isActive ? styles.active : styles.inactive
               }`}
@@ -167,18 +213,28 @@ export default function ResourceDirectory({
         </p>
       ) : (
         <div className="space-y-10">
-          {grouped.map(({ category, resources }) => (
-            <section key={category.id} id={category.slug} className="scroll-mt-20">
-              <h2 className="text-sm font-bold text-[#003DA5] uppercase tracking-wider mb-4 pb-2 border-b-2 border-[#FCD116]">
-                {category.name}
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {resources.map(resource => (
-                  <ResourceCard key={resource.id} resource={resource} />
-                ))}
-              </div>
-            </section>
-          ))}
+          {grouped.map(({ category, resources }) => {
+            const topId = resources.length > 0
+              ? resources.reduce((a, b) => (b.upvotes ?? 0) > (a.upvotes ?? 0) ? b : a).id
+              : null
+            const hasVotes = resources.some(r => (r.upvotes ?? 0) > 0)
+            return (
+              <section key={category.id} id={category.slug} className="scroll-mt-20">
+                <h2 className="text-sm font-bold text-[#003DA5] uppercase tracking-wider mb-4 pb-2 border-b-2 border-[#FCD116]">
+                  {category.name}
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {resources.map(resource => (
+                    <ResourceCard
+                      key={resource.id}
+                      resource={resource}
+                      isTop={hasVotes && resource.id === topId}
+                    />
+                  ))}
+                </div>
+              </section>
+            )
+          })}
 
           {uncategorized.length > 0 && (
             <section id="sin-categoria" className="scroll-mt-20">
