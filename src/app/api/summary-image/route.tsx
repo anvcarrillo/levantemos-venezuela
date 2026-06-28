@@ -6,8 +6,14 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-type Volunteer = { zone: string; details: string }
-type Donation = { location: string; items: string[] }
+type CategorySummary = {
+  category: string
+  slug: string
+  zones: string[]
+  materials: string[]
+  warnings: string[]
+  tips: string[]
+}
 
 export async function GET() {
   const { data: summary } = await supabase
@@ -17,10 +23,12 @@ export async function GET() {
     .limit(1)
     .single()
 
-  const volunteers: Volunteer[] = summary?.volunteers_needed ?? []
-  const donations: Donation[] = summary?.donations_needed ?? []
   const megaSynthesis: string = summary?.mega_synthesis ?? 'Información no disponible aún.'
   const conclusions: string = summary?.conclusions ?? ''
+  const cats: CategorySummary[] = (summary?.category_summaries ?? []).filter(
+    (c: CategorySummary) => c.zones.length > 0 || c.materials.length > 0 || c.warnings.length > 0
+  ).slice(0, 6)
+
   const createdAt = summary?.created_at
     ? new Date(summary.created_at).toLocaleString('es-VE', {
         day: 'numeric',
@@ -32,6 +40,39 @@ export async function GET() {
       })
     : ''
 
+  // Split categories into two columns
+  const leftCats = cats.filter((_, i) => i % 2 === 0)
+  const rightCats = cats.filter((_, i) => i % 2 !== 0)
+
+  function CategoryBlock({ cat }: { cat: CategorySummary }) {
+    const bullets: string[] = []
+    cat.zones.slice(0, 2).forEach(z => bullets.push(`📍 ${z}`))
+    cat.materials.slice(0, 2).forEach(m => bullets.push(`📦 ${m}`))
+    cat.warnings.slice(0, 1).forEach(w => bullets.push(`⚠️ ${w}`))
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', marginBottom: 14 }}>
+        <div
+          style={{
+            color: '#003DA5',
+            fontSize: 12,
+            fontWeight: 800,
+            marginBottom: 4,
+            borderLeft: '3px solid #FCD116',
+            paddingLeft: 6,
+          }}
+        >
+          {cat.category}
+        </div>
+        {bullets.slice(0, 3).map((b, i) => (
+          <div key={i} style={{ color: '#374151', fontSize: 11, lineHeight: 1.4, marginBottom: 2, paddingLeft: 6 }}>
+            {b.slice(0, 70)}
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   return new ImageResponse(
     (
       <div
@@ -40,143 +81,106 @@ export async function GET() {
           flexDirection: 'column',
           width: '100%',
           height: '100%',
-          backgroundColor: '#ffffff',
+          backgroundColor: '#f9fafb',
           fontFamily: 'sans-serif',
         }}
       >
         {/* Flag stripe */}
-        <div style={{ display: 'flex', height: 14 }}>
+        <div style={{ display: 'flex', height: 10 }}>
           <div style={{ flex: 1, backgroundColor: '#FCD116' }} />
           <div style={{ flex: 1, backgroundColor: '#003DA5' }} />
           <div style={{ flex: 1, backgroundColor: '#CF0921' }} />
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', padding: '36px 52px', flex: 1 }}>
-          {/* Header row */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{ color: '#003DA5', fontSize: 18, fontWeight: 700 }}>Levantando a Venezuela</div>
-              <div style={{ color: '#111827', fontSize: 40, fontWeight: 900, lineHeight: 1.1, marginTop: 4 }}>
-                ¿Qué se necesita?
-              </div>
+        {/* Header */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '14px 40px 10px',
+            backgroundColor: '#003DA5',
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ color: '#FCD116', fontSize: 13, fontWeight: 900 }}>
+              Levantando a Venezuela
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginTop: 6 }}>
-              <div style={{ color: '#6b7280', fontSize: 13 }}>Actualizado</div>
-              <div style={{ color: '#374151', fontSize: 13, fontWeight: 600 }}>{createdAt}</div>
+            <div style={{ color: 'white', fontSize: 22, fontWeight: 900, lineHeight: 1.1 }}>
+              ¿Qué se necesita ahora?
             </div>
           </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+            <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11 }}>Actualizado</div>
+            <div style={{ color: 'white', fontSize: 11, fontWeight: 600 }}>{createdAt}</div>
+          </div>
+        </div>
 
-          {/* Mega synthesis pill */}
+        {/* Mega synthesis */}
+        <div
+          style={{
+            display: 'flex',
+            backgroundColor: '#FEF9C3',
+            borderBottom: '2px solid #FCD116',
+            padding: '10px 40px',
+            color: '#78350F',
+            fontSize: 13,
+            fontWeight: 600,
+            lineHeight: 1.4,
+          }}
+        >
+          {megaSynthesis.slice(0, 180)}
+        </div>
+
+        {/* Category grid */}
+        <div style={{ display: 'flex', flex: 1, padding: '14px 40px', gap: 24 }}>
+          {/* Left column */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            {leftCats.map((cat, i) => (
+              <CategoryBlock key={i} cat={cat} />
+            ))}
+          </div>
+
+          {/* Divider */}
+          <div style={{ width: 1, backgroundColor: '#e5e7eb' }} />
+
+          {/* Right column */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            {rightCats.map((cat, i) => (
+              <CategoryBlock key={i} cat={cat} />
+            ))}
+          </div>
+        </div>
+
+        {/* Conclusions */}
+        {conclusions ? (
           <div
             style={{
               display: 'flex',
-              backgroundColor: '#FEF9C3',
-              border: '2px solid #FCD116',
-              borderRadius: 12,
-              padding: '14px 20px',
-              marginBottom: 28,
-              color: '#78350F',
-              fontSize: 17,
-              fontWeight: 600,
+              padding: '8px 40px',
+              borderTop: '1px solid #e5e7eb',
+              color: '#6b7280',
+              fontSize: 11,
               lineHeight: 1.4,
             }}
           >
-            {megaSynthesis}
+            <span style={{ fontWeight: 700, color: '#CF0921', marginRight: 4 }}>Resumen:</span>
+            {conclusions.slice(0, 200)}
           </div>
-
-          {/* Two columns */}
-          <div style={{ display: 'flex', gap: 28, flex: 1 }}>
-            {/* Volunteers */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  color: '#003DA5',
-                  fontSize: 15,
-                  fontWeight: 800,
-                  marginBottom: 14,
-                  paddingBottom: 8,
-                  borderBottom: '2px solid #003DA5',
-                }}
-              >
-                Voluntarios necesarios
-              </div>
-              {volunteers.slice(0, 3).map((v, i) => (
-                <div key={i} style={{ display: 'flex', flexDirection: 'column', marginBottom: 10 }}>
-                  <div style={{ color: '#111827', fontWeight: 700, fontSize: 13 }}>{v.zone}</div>
-                  <div style={{ color: '#6b7280', fontSize: 12, marginTop: 2, lineHeight: 1.4 }}>{v.details}</div>
-                </div>
-              ))}
-              {volunteers.length === 0 && (
-                <div style={{ color: '#9ca3af', fontSize: 13 }}>Sin datos disponibles</div>
-              )}
-            </div>
-
-            {/* Donations */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  color: '#CF0921',
-                  fontSize: 15,
-                  fontWeight: 800,
-                  marginBottom: 14,
-                  paddingBottom: 8,
-                  borderBottom: '2px solid #CF0921',
-                }}
-              >
-                Donaciones urgentes
-              </div>
-              {donations.slice(0, 3).map((d, i) => (
-                <div key={i} style={{ display: 'flex', flexDirection: 'column', marginBottom: 10 }}>
-                  <div style={{ color: '#111827', fontWeight: 700, fontSize: 13 }}>{d.location}</div>
-                  <div style={{ color: '#6b7280', fontSize: 12, marginTop: 2 }}>
-                    {d.items?.slice(0, 4).join(' · ')}
-                  </div>
-                </div>
-              ))}
-              {donations.length === 0 && (
-                <div style={{ color: '#9ca3af', fontSize: 13 }}>Sin datos disponibles</div>
-              )}
-            </div>
-          </div>
-
-          {/* Conclusions */}
-          {conclusions ? (
-            <div
-              style={{
-                display: 'flex',
-                borderTop: '1px solid #e5e7eb',
-                paddingTop: 16,
-                marginTop: 16,
-                color: '#374151',
-                fontSize: 12,
-                lineHeight: 1.5,
-              }}
-            >
-              <span style={{ fontWeight: 700, color: '#CF0921', marginRight: 6 }}>Conclusiones:</span>
-              {conclusions.slice(0, 220)}
-            </div>
-          ) : null}
-        </div>
+        ) : null}
 
         {/* Footer */}
         <div
           style={{
             display: 'flex',
             justifyContent: 'center',
-            alignItems: 'center',
-            padding: '10px 52px',
-            backgroundColor: '#003DA5',
-            color: 'rgba(255,255,255,0.65)',
-            fontSize: 12,
+            padding: '8px 40px',
+            backgroundColor: '#1f2937',
+            color: 'rgba(255,255,255,0.5)',
+            fontSize: 10,
           }}
         >
-          levantandoavenezuela.vercel.app · Información generada automáticamente a partir de recursos comunitarios
+          levantandoavenezuela.vercel.app · Generado automáticamente a partir de recursos comunitarios verificados
         </div>
       </div>
     ),

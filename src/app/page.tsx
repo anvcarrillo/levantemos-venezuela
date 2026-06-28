@@ -16,7 +16,7 @@ export default async function LandingPage() {
       .eq('accepts_international', true),
     supabase
       .from('daily_summary')
-      .select('mega_synthesis, created_at')
+      .select('mega_synthesis, created_at, category_summaries')
       .order('created_at', { ascending: false })
       .limit(1)
       .single(),
@@ -35,6 +35,7 @@ export default async function LandingPage() {
         <SummaryBanner
           megaSynthesis={latestSummary.mega_synthesis}
           createdAt={latestSummary.created_at}
+          categorySummaries={latestSummary.category_summaries ?? []}
         />
       )}
 
