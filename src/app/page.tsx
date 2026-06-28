@@ -10,7 +10,7 @@ export default async function HomePage() {
     supabase
       .from('resources')
       .select('*')
-      .neq('status', 'inactive')
+      .or('status.eq.active,status.is.null')
       .order('upvotes', { ascending: false })
       .order('updated_at', { ascending: false }),
   ])

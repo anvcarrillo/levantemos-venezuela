@@ -22,7 +22,7 @@ export default async function ZonasPage() {
         .from('resources')
         .select('*')
         .eq('category_id', catId)
-        .neq('status', 'inactive')
+        .or('status.eq.active,status.is.null')
         .order('upvotes', { ascending: false })
         .order('updated_at', { ascending: false })
     : { data: [] }
