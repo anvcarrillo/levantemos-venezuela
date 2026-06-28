@@ -9,9 +9,8 @@ const DARK = '#111827'
 const GRAY = '#6B7280'
 const LIGHT = '#F3F4F6'
 
-// 7 column widths — 1000px total (40px left pad)
+// 7 column widths — 1000px total (40px left pad, 40px right pad)
 const CW = [160, 148, 200, 128, 68, 148, 148]
-const CLABELS = ['CENTRO', 'DIRECCION', 'MATERIALES', 'CONTACTO', 'NIVEL', 'ADVERTENCIAS', 'RECOMENDACIONES']
 
 function clip(s: string, max: number) {
   return s.length > max ? s.slice(0, max - 1) + '...' : s
@@ -45,7 +44,6 @@ type OrgGroup = {
   parcialCount: number
 }
 
-// Never throws — on any error returns empty orgs
 async function fetchOrgs(): Promise<{ orgs: OrgGroup[]; generatedAt: string; error?: string }> {
   const generatedAt = new Date().toLocaleString('es-VE', {
     day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas',
@@ -77,13 +75,23 @@ async function fetchOrgs(): Promise<{ orgs: OrgGroup[]; generatedAt: string; err
   }
 }
 
-// Column separator — same trick as summary-image (avoids borderRight shorthand)
-function Sep() {
-  return <div style={{ width: 1, backgroundColor: '#E5E7EB', alignSelf: 'stretch' }} />
+// Shared border style for column separators (long-form — Satori-safe)
+const COL_BORDER = {
+  borderRightWidth: 1,
+  borderRightStyle: 'solid' as const,
+  borderRightColor: '#E5E7EB',
 }
 
-function DarkSep() {
-  return <div style={{ width: 1, backgroundColor: '#374151', alignSelf: 'stretch' }} />
+const COL_BORDER_DARK = {
+  borderRightWidth: 1,
+  borderRightStyle: 'solid' as const,
+  borderRightColor: '#374151',
+}
+
+const ROW_BORDER = {
+  borderBottomWidth: 1,
+  borderBottomStyle: 'solid' as const,
+  borderBottomColor: '#E5E7EB',
 }
 
 function TablePage({ orgs, pageOrgs, page, totalPages, generatedAt, rowH }: {
@@ -94,7 +102,7 @@ function TablePage({ orgs, pageOrgs, page, totalPages, generatedAt, rowH }: {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: W, height: H, backgroundColor: '#ffffff', fontFamily: 'sans-serif' }}>
 
-      {/* Flag */}
+      {/* Flag stripe */}
       <div style={{ display: 'flex', flexDirection: 'row', height: 8 }}>
         <div style={{ flex: 1, backgroundColor: YELLOW }} />
         <div style={{ flex: 1, backgroundColor: BLUE }} />
@@ -117,17 +125,32 @@ function TablePage({ orgs, pageOrgs, page, totalPages, generatedAt, rowH }: {
         </div>
       </div>
 
-      {/* Column headers */}
+      {/* Column headers row */}
       <div style={{ display: 'flex', flexDirection: 'row', height: 30, backgroundColor: DARK, paddingLeft: 40 }}>
-        {CLABELS.map((label, ci) => [
-          <div key={`h${ci}`} style={{ display: 'flex', alignItems: 'center', width: CW[ci], paddingLeft: 6 }}>
-            <div style={{ color: YELLOW, fontSize: 8, fontWeight: 800 }}>{label}</div>
-          </div>,
-          ci < CLABELS.length - 1 ? <DarkSep key={`hs${ci}`} /> : null,
-        ])}
+        <div style={{ display: 'flex', alignItems: 'center', width: CW[0], paddingLeft: 6, ...COL_BORDER_DARK }}>
+          <div style={{ color: YELLOW, fontSize: 8, fontWeight: 800 }}>CENTRO</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', width: CW[1], paddingLeft: 6, ...COL_BORDER_DARK }}>
+          <div style={{ color: YELLOW, fontSize: 8, fontWeight: 800 }}>DIRECCIÓN</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', width: CW[2], paddingLeft: 6, ...COL_BORDER_DARK }}>
+          <div style={{ color: YELLOW, fontSize: 8, fontWeight: 800 }}>MATERIALES</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', width: CW[3], paddingLeft: 6, ...COL_BORDER_DARK }}>
+          <div style={{ color: YELLOW, fontSize: 8, fontWeight: 800 }}>CONTACTO</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', width: CW[4], paddingLeft: 4, ...COL_BORDER_DARK }}>
+          <div style={{ color: YELLOW, fontSize: 8, fontWeight: 800 }}>NIVEL</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', width: CW[5], paddingLeft: 6, ...COL_BORDER_DARK }}>
+          <div style={{ color: YELLOW, fontSize: 8, fontWeight: 800 }}>ADVERTENCIAS</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', width: CW[6], paddingLeft: 6 }}>
+          <div style={{ color: YELLOW, fontSize: 8, fontWeight: 800 }}>RECOMENDACIONES</div>
+        </div>
       </div>
 
-      {/* Rows */}
+      {/* Data rows */}
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, paddingLeft: 40 }}>
         {pageOrgs.map((g, ri) => {
           const org = g.org
@@ -137,8 +160,8 @@ function TablePage({ orgs, pageOrgs, page, totalPages, generatedAt, rowH }: {
             ? String(g.activaCount) + ' sin compromiso'
             : String(g.parcialCount) + ' parcial'
           const recText = org.contactoTelefono
-            ? 'Llamar: ' + (org.contactoNombre ? org.contactoNombre + ' ' : '') + org.contactoTelefono
-            : org.verificada ? 'Org. verificada' : 'Coordinar por redes'
+            ? 'Llamar: ' + (org.contactoNombre ? org.contactoNombre.split(' ')[0] + ' ' : '') + org.contactoTelefono
+            : org.verificada ? 'Org. verificada - ir directo' : 'Coordinar por redes primero'
           const tipo = org.tipo.replace(/_/g, ' ')
           const matLines: string[] = g.needs.slice(0, 4).map(n => {
             const rem = n.cantidadNecesaria - n.cantidadComprometida - n.cantidadCumplida
@@ -148,41 +171,35 @@ function TablePage({ orgs, pageOrgs, page, totalPages, generatedAt, rowH }: {
           const rowBg = ri % 2 === 1 ? LIGHT : '#ffffff'
 
           return (
-            <div key={g.orgId} style={{ display: 'flex', flexDirection: 'row', height: rowH, backgroundColor: rowBg, borderBottomWidth: 1, borderBottomStyle: 'solid', borderBottomColor: '#E5E7EB' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: CW[0], height: rowH, paddingLeft: 6, paddingRight: 6 }}>
+            <div key={String(g.orgId)} style={{ display: 'flex', flexDirection: 'row', height: rowH, backgroundColor: rowBg, ...ROW_BORDER }}>
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: CW[0], height: rowH, paddingLeft: 6, paddingRight: 6, ...COL_BORDER }}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: DARK }}>{clip(org.nombre, 28)}</div>
                 <div style={{ fontSize: 8, color: GRAY, marginTop: 2 }}>{clip(tipo, 22)}</div>
                 {org.verificada ? <div style={{ fontSize: 8, color: '#059669', marginTop: 1, fontWeight: 700 }}>Verificada</div> : null}
               </div>
-              <Sep />
-              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: CW[1], height: rowH, paddingLeft: 6, paddingRight: 6 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: CW[1], height: rowH, paddingLeft: 6, paddingRight: 6, ...COL_BORDER }}>
                 <div style={{ fontSize: 8, color: DARK }}>{clip(org.direccion, 50)}</div>
                 <div style={{ fontSize: 8, color: GRAY, marginTop: 2, fontWeight: 600 }}>{org.ciudad}, {org.estado}</div>
               </div>
-              <Sep />
-              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: CW[2], height: rowH, paddingLeft: 6, paddingRight: 6 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: CW[2], height: rowH, paddingLeft: 6, paddingRight: 6, ...COL_BORDER }}>
                 {matLines.map((line, li) => (
-                  <div key={li} style={{ fontSize: 8, color: DARK }}>{'• '}{line}</div>
+                  <div key={String(li)} style={{ fontSize: 8, color: DARK }}>{'• '}{line}</div>
                 ))}
               </div>
-              <Sep />
-              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: CW[3], height: rowH, paddingLeft: 6, paddingRight: 6 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: CW[3], height: rowH, paddingLeft: 6, paddingRight: 6, ...COL_BORDER }}>
                 {org.contactoNombre ? <div style={{ fontSize: 8, color: DARK, fontWeight: 600 }}>{clip(org.contactoNombre, 22)}</div> : null}
                 {org.contactoTelefono ? <div style={{ fontSize: 8, color: BLUE, marginTop: 2 }}>{org.contactoTelefono}</div> : null}
                 {!org.contactoNombre && !org.contactoTelefono ? <div style={{ fontSize: 8, color: GRAY }}>N/D</div> : null}
               </div>
-              <Sep />
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: CW[4], height: rowH, paddingLeft: 4, paddingRight: 4 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: CW[4], height: rowH, paddingLeft: 4, paddingRight: 4, ...COL_BORDER }}>
                 <div style={{ display: 'flex', flexDirection: 'row', backgroundColor: nivelBg, borderRadius: 3, paddingLeft: 4, paddingRight: 4, paddingTop: 3, paddingBottom: 3 }}>
                   <div style={{ color: '#ffffff', fontSize: 8, fontWeight: 800 }}>{nivelLabel}</div>
                 </div>
-                <div style={{ fontSize: 7, color: GRAY, marginTop: 3 }}>{g.needs.length} items</div>
+                <div style={{ fontSize: 7, color: GRAY, marginTop: 3 }}>{String(g.needs.length)} items</div>
               </div>
-              <Sep />
-              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: CW[5], height: rowH, paddingLeft: 6, paddingRight: 6 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: CW[5], height: rowH, paddingLeft: 6, paddingRight: 6, ...COL_BORDER }}>
                 <div style={{ fontSize: 8, color: '#92400E' }}>{advText}</div>
               </div>
-              <Sep />
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: CW[6], height: rowH, paddingLeft: 6, paddingRight: 6 }}>
                 <div style={{ fontSize: 8, color: '#1E40AF' }}>{clip(recText, 55)}</div>
               </div>
@@ -209,13 +226,12 @@ export async function GET(request: Request) {
 
   const { orgs, generatedAt, error } = await fetchOrgs()
 
-  // If no data — show placeholder image
   if (!orgs.length) {
     return new ImageResponse(
       <div style={{ display: 'flex', width: W, height: H, backgroundColor: BLUE, alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
         <div style={{ color: YELLOW, fontSize: 30, fontWeight: 900 }}>Levantando a Venezuela</div>
         <div style={{ color: '#ffffff', fontSize: 16, marginTop: 20 }}>Datos no disponibles temporalmente</div>
-        {error ? <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, marginTop: 10 }}>{error.slice(0, 80)}</div> : null}
+        {error ? <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, marginTop: 10 }}>{String(error).slice(0, 80)}</div> : null}
       </div>,
       { width: W, height: H }
     )
