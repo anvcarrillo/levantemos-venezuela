@@ -18,7 +18,7 @@ export default async function LandingPage() {
       .select('*', { count: 'exact', head: true })
       .eq('accepts_international', true),
     supabase
-      .from('categories')
+      .from('resources_categories')
       .select('id')
       .in('slug', ['personas-desaparecidas', 'personas-encontradas']),
   ])
@@ -41,15 +41,25 @@ export default async function LandingPage() {
   return (
     <div>
       {/* Banner de emergencia */}
-      <div className="bg-red-600 text-white rounded-xl text-center text-sm py-3 px-4 mb-10 flex items-center justify-center gap-2.5">
+      <div className="bg-[#CF0921] text-white rounded-xl text-center text-sm py-3 px-4 mb-10 flex items-center justify-center gap-2.5">
         <span className="w-2 h-2 bg-white rounded-full animate-pulse shrink-0" />
         <span className="font-medium">Crisis activa — Terremoto Venezuela 2025 · Esta plataforma se actualiza en tiempo real con información de la comunidad</span>
       </div>
 
       {/* Hero */}
       <div className="text-center mb-14">
-        <h1 className="text-5xl font-black text-gray-900 leading-tight mb-4">
-          Levantando a Venezuela
+        {/* Venezuelan flag stripe */}
+        <div className="flex justify-center mb-6">
+          <div className="flex rounded-full overflow-hidden h-1.5 w-32">
+            <div className="flex-1 bg-[#FCD116]" />
+            <div className="flex-1 bg-[#003DA5]" />
+            <div className="flex-1 bg-[#CF0921]" />
+          </div>
+        </div>
+
+        <h1 className="text-5xl font-black leading-tight mb-4">
+          <span className="text-gray-900">Levantando a </span>
+          <span className="text-[#003DA5] underline decoration-[#FCD116] decoration-4 underline-offset-4">Venezuela</span>
         </h1>
         <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
           Directorio unificado de recursos, fundaciones e iniciativas para la crisis del terremoto.
@@ -92,9 +102,9 @@ function StatPill({
   color: 'blue' | 'green' | 'red'
 }) {
   const colors = {
-    blue: 'text-blue-700',
-    green: 'text-green-700',
-    red: 'text-red-700',
+    blue: 'text-[#003DA5]',
+    green: 'text-emerald-600',
+    red: 'text-[#CF0921]',
   }
   return (
     <div className="text-center">

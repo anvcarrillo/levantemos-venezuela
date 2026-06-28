@@ -30,6 +30,25 @@ const FILTERS = [
   },
 ]
 
+const FILTER_STYLES: Record<string, { active: string; inactive: string }> = {
+  Reportes: {
+    active: 'bg-[#CF0921] border-[#CF0921] text-white shadow-sm',
+    inactive: 'bg-white border-gray-200 text-[#CF0921] hover:border-[#CF0921] hover:bg-red-50',
+  },
+  Profesionales: {
+    active: 'bg-[#003DA5] border-[#003DA5] text-white shadow-sm',
+    inactive: 'bg-white border-gray-200 text-[#003DA5] hover:border-[#003DA5] hover:bg-blue-50',
+  },
+  Coordinacion: {
+    active: 'bg-[#FCD116] border-[#FCD116] text-gray-900 shadow-sm',
+    inactive: 'bg-white border-gray-200 text-amber-700 hover:border-[#FCD116] hover:bg-yellow-50',
+  },
+  Informacion: {
+    active: 'bg-gray-700 border-gray-700 text-white shadow-sm',
+    inactive: 'bg-white border-gray-200 text-gray-600 hover:border-gray-400 hover:bg-gray-50',
+  },
+}
+
 export default function ResourceDirectory({
   categories,
   resources,
@@ -83,14 +102,13 @@ export default function ResourceDirectory({
       <div className="flex flex-wrap gap-2 mb-5">
         {FILTERS.map(f => {
           const isActive = activeFilter === f.label
+          const styles = FILTER_STYLES[f.label]
           return (
             <button
               key={f.label}
               onClick={() => setActiveFilter(isActive ? null : f.label)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                isActive
-                  ? 'bg-blue-600 border-blue-600 text-white'
-                  : 'bg-white border-gray-200 text-gray-600 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200'
+              className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition-all ${
+                isActive ? styles.active : styles.inactive
               }`}
             >
               {f.label}
@@ -106,7 +124,7 @@ export default function ResourceDirectory({
           placeholder="Buscar recursos por nombre, descripción o URL…"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#003DA5] bg-white"
         />
       </div>
 
@@ -117,7 +135,7 @@ export default function ResourceDirectory({
             <a
               key={category.id}
               href={`#${category.slug}`}
-              className="text-xs bg-white border border-gray-200 rounded-full px-3 py-1 text-gray-600 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-colors"
+              className="text-xs bg-white border border-[#003DA5]/25 rounded-full px-3 py-1 text-[#003DA5] hover:bg-blue-50 hover:border-[#003DA5] transition-colors"
             >
               {category.name}
             </a>
@@ -137,10 +155,10 @@ export default function ResourceDirectory({
         <div className="space-y-10">
           {grouped.map(({ category, resources }) => (
             <section key={category.id} id={category.slug} className="scroll-mt-20">
-              <h2 className="text-base font-semibold text-gray-700 uppercase tracking-wide mb-3 pb-2 border-b border-gray-200">
+              <h2 className="text-sm font-bold text-[#003DA5] uppercase tracking-wider mb-4 pb-2 border-b-2 border-[#FCD116]">
                 {category.name}
               </h2>
-              <div className="space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {resources.map(resource => (
                   <ResourceCard key={resource.id} resource={resource} />
                 ))}
@@ -150,10 +168,10 @@ export default function ResourceDirectory({
 
           {uncategorized.length > 0 && (
             <section id="sin-categoria" className="scroll-mt-20">
-              <h2 className="text-base font-semibold text-gray-700 uppercase tracking-wide mb-3 pb-2 border-b border-gray-200">
+              <h2 className="text-sm font-bold text-[#003DA5] uppercase tracking-wider mb-4 pb-2 border-b-2 border-[#FCD116]">
                 Recursos
               </h2>
-              <div className="space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {uncategorized.map(resource => (
                   <ResourceCard key={resource.id} resource={resource} />
                 ))}

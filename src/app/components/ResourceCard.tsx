@@ -57,37 +57,51 @@ export default function ResourceCard({ resource }: { resource: Resource }) {
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 px-4 py-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <a
-            href={resource.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:underline font-medium text-sm break-words"
-          >
-            {title}
-          </a>
-          {resource.description && (
-            <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{resource.description}</p>
-          )}
-        </div>
+    <div className="bg-white rounded-xl border border-gray-100 border-l-4 border-l-[#FCD116] p-4 flex flex-col h-full shadow-sm hover:shadow-md transition-shadow">
+      {/* Title + description */}
+      <div className="flex-1 min-w-0">
+        <a
+          href={resource.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold text-sm text-[#003DA5] hover:underline line-clamp-2 leading-snug"
+        >
+          {title}
+        </a>
+        {resource.description && (
+          <p className="text-xs text-gray-500 mt-1.5 leading-relaxed line-clamp-2">
+            {resource.description}
+          </p>
+        )}
+      </div>
 
-        <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
+      {/* Footer */}
+      <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 gap-2">
+        <span className="text-xs text-gray-400 shrink-0">
+          {new Date(resource.updated_at).toLocaleDateString('es-VE', {
+            day: 'numeric', month: 'short',
+          })}
+        </span>
+
+        <div className="flex items-center gap-1 shrink-0">
           {/* Copiar */}
           <button
             onClick={handleCopy}
             title="Copiar link"
-            className="text-xs px-2 py-1 rounded border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors whitespace-nowrap"
+            className={`text-xs px-2 py-1 rounded-md border transition-colors ${
+              copied
+                ? 'border-green-200 bg-green-50 text-green-600'
+                : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'
+            }`}
           >
-            {copied ? '✓ Copiado' : '📋'}
+            {copied ? '✓' : '📋'}
           </button>
 
           {/* WhatsApp */}
           <button
             onClick={handleWhatsApp}
             title="Compartir por WhatsApp"
-            className="text-xs px-2 py-1 rounded border border-gray-200 text-gray-500 hover:bg-green-50 hover:text-green-700 hover:border-green-200 transition-colors"
+            className="text-xs px-2 py-1 rounded-md border border-gray-200 text-gray-400 hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-colors"
           >
             📱
           </button>
@@ -96,11 +110,11 @@ export default function ResourceCard({ resource }: { resource: Resource }) {
           <button
             onClick={handleUpvote}
             disabled={voted}
-            title={voted ? 'Ya votaste' : 'Marcar como útil'}
-            className={`text-xs px-2 py-1 rounded border transition-colors ${
+            title={voted ? 'Ya votaste' : 'Útil'}
+            className={`text-xs px-2 py-1 rounded-md border transition-colors ${
               voted
-                ? 'border-blue-200 bg-blue-50 text-blue-600 cursor-default'
-                : 'border-gray-200 text-gray-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200'
+                ? 'border-[#003DA5] bg-blue-50 text-[#003DA5] cursor-default'
+                : 'border-gray-200 text-gray-400 hover:border-[#003DA5] hover:text-[#003DA5] hover:bg-blue-50'
             }`}
           >
             👍 {votes}
@@ -109,29 +123,23 @@ export default function ResourceCard({ resource }: { resource: Resource }) {
           {/* Reportar */}
           <div ref={reportRef} className="relative">
             {reported ? (
-              <span className="text-xs text-gray-400 px-1">Reportado</span>
+              <span className="text-xs text-gray-300 px-1">✓</span>
             ) : (
               <>
                 <button
                   onClick={() => setShowReport(!showReport)}
                   title="Reportar"
-                  className="text-xs px-2 py-1 rounded border border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors"
+                  className="text-xs px-2 py-1 rounded-md border border-gray-200 text-gray-300 hover:bg-red-50 hover:text-[#CF0921] hover:border-red-200 transition-colors"
                 >
                   ⚠️
                 </button>
                 {showReport && (
-                  <div className="absolute right-0 top-8 z-20 bg-white border border-gray-200 rounded-lg shadow-lg w-44 overflow-hidden">
+                  <div className="absolute right-0 bottom-8 z-20 bg-white border border-gray-200 rounded-lg shadow-lg w-44 overflow-hidden">
                     <p className="px-3 py-2 text-xs text-gray-400 border-b border-gray-100">¿Por qué reportas?</p>
-                    <button
-                      onClick={handleReport}
-                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600"
-                    >
+                    <button onClick={handleReport} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-[#CF0921]">
                       Desactualizado
                     </button>
-                    <button
-                      onClick={handleReport}
-                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 border-t border-gray-100"
-                    >
+                    <button onClick={handleReport} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-[#CF0921] border-t border-gray-100">
                       Erróneo / Inactivo
                     </button>
                   </div>
@@ -141,12 +149,6 @@ export default function ResourceCard({ resource }: { resource: Resource }) {
           </div>
         </div>
       </div>
-
-      <p className="text-xs text-gray-400 mt-2">
-        {new Date(resource.updated_at).toLocaleDateString('es-VE', {
-          day: 'numeric', month: 'short', year: 'numeric',
-        })}
-      </p>
     </div>
   )
 }

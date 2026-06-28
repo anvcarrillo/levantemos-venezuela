@@ -23,9 +23,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="es" className={`${geist.variable} h-full antialiased`}>
       <body className="min-h-full bg-gray-50 text-gray-900">
-        <nav className="bg-white border-b border-gray-200 sticky top-0 z-40">
-          <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-            <Link href="/" className="font-bold text-gray-900 hover:text-gray-700">
+        <nav className="bg-[#003DA5] sticky top-0 z-40 shadow-md">
+          <div className="max-w-5xl mx-auto px-6 py-3.5 flex items-center justify-between">
+            <Link href="/" className="font-black text-lg text-[#FCD116] hover:text-yellow-300 transition-colors tracking-tight">
               Levantando a Venezuela
             </Link>
             <NavMenu

@@ -34,7 +34,7 @@ export default function NavMenu({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+        className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
       >
         Menú
         <svg
@@ -49,12 +49,12 @@ export default function NavMenu({
         <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden py-1">
 
           {/* Recursos & Apps */}
-          <Link href="/recursos" onClick={close} className="flex items-center gap-2 px-4 py-2.5 font-medium text-sm text-gray-900 hover:bg-gray-50">
+          <Link href="/recursos" onClick={close} className="flex items-center gap-2 px-4 py-2.5 font-semibold text-sm text-[#003DA5] hover:bg-blue-50">
             <span>📋</span> Recursos & Apps
           </Link>
           {categories.map(cat => (
             <Link key={cat.id} href={`/recursos#${cat.slug}`} onClick={close}
-              className="flex pl-10 pr-4 py-1.5 text-xs text-gray-500 hover:bg-blue-50 hover:text-blue-700">
+              className="flex pl-10 pr-4 py-1.5 text-xs text-gray-500 hover:bg-blue-50 hover:text-[#003DA5]">
               {cat.name}
             </Link>
           ))}
@@ -62,40 +62,38 @@ export default function NavMenu({
           <div className="my-1 border-t border-gray-100" />
 
           {/* Fundaciones */}
-          <Link href="/fundaciones" onClick={close} className="flex items-center gap-2 px-4 py-2.5 font-medium text-sm text-gray-900 hover:bg-gray-50">
+          <Link href="/fundaciones" onClick={close} className="flex items-center gap-2 px-4 py-2.5 font-semibold text-sm text-[#003DA5] hover:bg-blue-50">
             <span>🏛️</span> Fundaciones
           </Link>
           {foundationCategories.map(cat => (
             <Link key={cat.id} href={`/fundaciones#${cat.slug}`} onClick={close}
-              className="flex pl-10 pr-4 py-1.5 text-xs text-gray-500 hover:bg-blue-50 hover:text-blue-700">
+              className="flex pl-10 pr-4 py-1.5 text-xs text-gray-500 hover:bg-blue-50 hover:text-[#003DA5]">
               {cat.name}
             </Link>
           ))}
 
           <div className="my-1 border-t border-gray-100" />
 
-          {/* Iniciativas */}
-          <Link href="/iniciativas" onClick={close} className="flex items-center gap-2 px-4 py-2.5 font-medium text-sm text-gray-900 hover:bg-gray-50">
+          <Link href="/iniciativas" onClick={close} className="flex items-center gap-2 px-4 py-2.5 font-semibold text-sm text-[#003DA5] hover:bg-blue-50">
             <span>💡</span> Iniciativas de Ciudadanos
           </Link>
 
           <div className="my-1 border-t border-gray-100" />
 
           {/* Zonas de Interés */}
-          <Link href="/zonas" onClick={close} className="flex items-center gap-2 px-4 py-2.5 font-medium text-sm text-gray-900 hover:bg-gray-50">
+          <Link href="/zonas" onClick={close} className="flex items-center gap-2 px-4 py-2.5 font-semibold text-sm text-[#003DA5] hover:bg-blue-50">
             <span>📍</span> Zonas de Interés
           </Link>
           {zoneCategories.map(z => (
             <Link key={z.id} href={`/zonas#${z.slug}`} onClick={close}
-              className="flex pl-10 pr-4 py-1.5 text-xs text-gray-500 hover:bg-blue-50 hover:text-blue-700">
+              className="flex pl-10 pr-4 py-1.5 text-xs text-gray-500 hover:bg-blue-50 hover:text-[#003DA5]">
               {z.name}
             </Link>
           ))}
 
           <div className="my-1 border-t border-gray-100" />
 
-          {/* Desaparecidos */}
-          <Link href="/desaparecidos" onClick={close} className="flex items-center gap-2 px-4 py-2.5 font-medium text-sm text-gray-900 hover:bg-gray-50">
+          <Link href="/desaparecidos" onClick={close} className="flex items-center gap-2 px-4 py-2.5 font-semibold text-sm text-[#CF0921] hover:bg-red-50">
             <span>🔍</span> Lista de Desaparecidos
           </Link>
         </div>

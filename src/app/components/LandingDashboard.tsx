@@ -48,7 +48,7 @@ const SECTIONS = [
     title: 'Zonas de Interés',
     href: '/zonas',
     description: 'Mapa interactivo con centros de acopio, refugios y comedores activos en las zonas afectadas.',
-    color: 'orange' as const,
+    color: 'yellow' as const,
     countKey: null,
   },
   {
@@ -70,11 +70,11 @@ const SECTIONS = [
 ]
 
 const COLOR = {
-  blue:   { border: 'border-blue-400',   bg: 'bg-blue-50',   icon: 'bg-blue-100',   badge: 'bg-blue-100 text-blue-700',   link: 'text-blue-600'   },
-  green:  { border: 'border-green-400',  bg: 'bg-green-50',  icon: 'bg-green-100',  badge: 'bg-green-100 text-green-700',  link: 'text-green-600'  },
-  orange: { border: 'border-orange-400', bg: 'bg-orange-50', icon: 'bg-orange-100', badge: 'bg-orange-100 text-orange-700', link: 'text-orange-600' },
-  red:    { border: 'border-red-400',    bg: 'bg-red-50',    icon: 'bg-red-100',    badge: 'bg-red-100 text-red-700',      link: 'text-red-600'    },
-  purple: { border: 'border-purple-400', bg: 'bg-purple-50', icon: 'bg-purple-100', badge: 'bg-purple-100 text-purple-700', link: 'text-purple-600' },
+  blue:   { border: 'border-[#003DA5]', bg: 'bg-blue-50',   icon: 'bg-[#003DA5]/10', badge: 'bg-[#003DA5]/10 text-[#003DA5]', link: 'text-[#003DA5]'  },
+  green:  { border: 'border-emerald-500', bg: 'bg-emerald-50', icon: 'bg-emerald-100', badge: 'bg-emerald-100 text-emerald-700', link: 'text-emerald-600' },
+  yellow: { border: 'border-[#FCD116]', bg: 'bg-yellow-50', icon: 'bg-[#FCD116]/20', badge: 'bg-[#FCD116]/20 text-amber-700',  link: 'text-amber-600'  },
+  red:    { border: 'border-[#CF0921]', bg: 'bg-red-50',    icon: 'bg-[#CF0921]/10', badge: 'bg-[#CF0921]/10 text-[#CF0921]', link: 'text-[#CF0921]'  },
+  purple: { border: 'border-purple-400', bg: 'bg-purple-50', icon: 'bg-purple-100',   badge: 'bg-purple-100 text-purple-700',  link: 'text-purple-600' },
 }
 
 export default function LandingDashboard({
@@ -100,7 +100,7 @@ export default function LandingDashboard({
             key={section.href}
             href={section.href}
             className={`group relative bg-white rounded-2xl border-2 ${c.border} p-6 flex flex-col gap-4
-              shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 cursor-pointer
+              shadow-sm hover:shadow-xl hover:shadow-black/10 hover:-translate-y-1.5 transition-all duration-300 cursor-pointer
               ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
             style={{
               transitionDelay: visible ? '0ms' : `${i * 90}ms`,
