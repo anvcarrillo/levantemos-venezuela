@@ -13,10 +13,12 @@ export const metadata: Metadata = {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [{ data: categories }, { data: foundationCategories }] = await Promise.all([
-    supabase.from('resources_categories').select('*').order('name'),
-    supabase.from('foundation_categories').select('*').order('name'),
-  ])
+  const [{ data: categories }, { data: foundationCategories }, { data: zoneCategories }] =
+    await Promise.all([
+      supabase.from('resources_categories').select('*').order('name'),
+      supabase.from('foundation_categories').select('*').order('name'),
+      supabase.from('zones_categories').select('*').order('name'),
+    ])
 
   return (
     <html lang="es" className={`${geist.variable} h-full antialiased`}>
@@ -29,6 +31,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <NavMenu
               categories={categories ?? []}
               foundationCategories={foundationCategories ?? []}
+              zoneCategories={zoneCategories ?? []}
             />
           </div>
         </nav>

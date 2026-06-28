@@ -1,13 +1,20 @@
 import { createClient } from '@supabase/supabase-js'
 
 export type Category = {
-  id: string
+  id: number
   name: string
   slug: string
 }
 
 export type FoundationCategory = {
-  id: string
+  id: number
+  name: string
+  slug: string
+  created_at: string
+}
+
+export type ZoneCategory = {
+  id: number
   name: string
   slug: string
   created_at: string
@@ -19,7 +26,7 @@ export type Resource = {
   url_normalized: string | null
   title: string | null
   description: string | null
-  category_id: string
+  category_id: number
   status: string | null
   upvotes: number
   report_count: number
@@ -37,7 +44,7 @@ export type Foundation = {
   donation_url: string | null
   accepts_international: boolean
   notes: string | null
-  category_id: string | null
+  category_id: number | null
   created_at: string
   category?: FoundationCategory
 }
@@ -45,13 +52,14 @@ export type Foundation = {
 export type Zone = {
   id: string
   name: string
-  type: string
+  category_id: number | null
   address: string | null
   city: string | null
   state: string | null
   phone: string | null
   notes: string | null
   created_at: string
+  category?: ZoneCategory
 }
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!

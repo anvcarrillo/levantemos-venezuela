@@ -33,7 +33,7 @@ export default function AgregarRecursoModal({ categories }: { categories: Catego
       url,
       title: title.trim() || null,
       description: description.trim() || null,
-      category_id: categoryId,
+      category_id: parseInt(categoryId, 10),
       status: 'active',
     })
 

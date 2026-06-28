@@ -3,20 +3,16 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import type { Category, FoundationCategory } from '@/lib/supabase'
-
-const ZONE_ITEMS = [
-  { name: 'Centros de Acopio', slug: 'centros-acopio' },
-  { name: 'Refugios para Niños', slug: 'refugios-ninos' },
-  { name: 'Comedores', slug: 'comedores' },
-]
+import type { Category, FoundationCategory, ZoneCategory } from '@/lib/supabase'
 
 export default function NavMenu({
   categories,
   foundationCategories,
+  zoneCategories,
 }: {
   categories: Category[]
   foundationCategories: FoundationCategory[]
+  zoneCategories: ZoneCategory[]
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -89,8 +85,8 @@ export default function NavMenu({
           <Link href="/zonas" onClick={close} className="flex items-center gap-2 px-4 py-2.5 font-medium text-sm text-gray-900 hover:bg-gray-50">
             <span>📍</span> Zonas de Interés
           </Link>
-          {ZONE_ITEMS.map(z => (
-            <Link key={z.slug} href={`/zonas#${z.slug}`} onClick={close}
+          {zoneCategories.map(z => (
+            <Link key={z.id} href={`/zonas#${z.slug}`} onClick={close}
               className="flex pl-10 pr-4 py-1.5 text-xs text-gray-500 hover:bg-blue-50 hover:text-blue-700">
               {z.name}
             </Link>
