@@ -33,25 +33,28 @@ type RedAyudaRecord = {
 
 const URGENCY_ORDER: Record<string, number> = { alta: 0, media: 1, baja: 2 }
 
-async function fetchRedAyudaBlock(): Promise<string> {
+async function fetchRedAyudaBlock(): Promise<{ block: string; status: string }> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 15000)
   try {
     const res = await fetch('https://redayudavenezuela.com/api/data', {
+      cache: 'no-store',
+      signal: controller.signal,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
         'Accept': 'application/json, */*',
         'Accept-Language': 'es-VE,es;q=0.9',
-        'Referer': 'https://redayudavenezuela.com/',
       },
-      signal: AbortSignal.timeout(15000),
     })
+    clearTimeout(timer)
 
-    if (!res.ok) return ''
+    if (!res.ok) return { block: '', status: `http_${res.status}` }
 
     const json = await res.json()
     const all: RedAyudaRecord[] = Array.isArray(json) ? json : (json.data ?? [])
     const active = all.filter(r => r.status === 'activo' && r.kind === 'necesidad')
 
-    if (!active.length) return ''
+    if (!active.length) return { block: '', status: 'empty' }
 
     // Group by zone (area + city + state)
     const byZone = new Map<string, RedAyudaRecord[]>()
@@ -102,9 +105,11 @@ async function fetchRedAyudaBlock(): Promise<string> {
       lines.push('')
     }
 
-    return lines.join('\n').slice(0, 5000)
-  } catch {
-    return ''
+    return { block: lines.join('\n').slice(0, 5000), status: `ok_${active.length}` }
+  } catch (err) {
+    clearTimeout(timer)
+    const msg = err instanceof Error ? err.message : String(err)
+    return { block: '', status: `error_${msg.slice(0, 60)}` }
   }
 }
 
@@ -193,7 +198,7 @@ export async function POST(request: Request) {
   }
 
   // 1. Pre-fetch RedAyuda API in parallel with Supabase queries
-  const [redAyudaBlock, { data: resources, error: resError }, { data: categories, error: catError }] =
+  const [{ block: redAyudaBlock, status: redAyudaStatus }, { data: resources, error: resError }, { data: categories, error: catError }] =
     await Promise.all([
       fetchRedAyudaBlock(),
       supabaseAdmin
@@ -357,6 +362,6 @@ ${resourcesBlock}`,
     success: true,
     id: data.id,
     categories_analyzed: parsed.category_summaries.length,
-    redayuda_records: redAyudaBlock ? 'fetched' : 'unavailable',
+    redayuda_status: redAyudaStatus,
   })
 }
