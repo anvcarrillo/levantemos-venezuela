@@ -41,17 +41,33 @@ function igClip(s: string, max: number) {
 }
 
 async function fetchAyudaOrgs(): Promise<{ orgs: AyudaOrg[]; generatedAt: string }> {
-  const generatedAt = new Date().toLocaleString('es-VE', {
-    day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas',
-  })
-  // DEBUG: Return static data while testing Satori rendering
-  const staticNeed = (id: number, orgId: number, nombre: string, status: string): AyudaNeed => ({
-    id, orgId, nombreArticulo: nombre, cantidadNecesaria: 5, cantidadComprometida: 0, cantidadCumplida: 0, status,
-    organizacion: { nombre: 'TEST ORG', tipo: 'centro_acopio', estado: 'Caracas', ciudad: 'Caracas', direccion: 'Av Test 123', contactoNombre: 'Juan', contactoTelefono: '0412-0000000', verificada: true },
-  })
-  const testOrg: AyudaOrg = { orgId: 1, org: { nombre: 'CENTRO DE ACOPIO PARIMA', tipo: 'centro_acopio', estado: 'Caracas DC', ciudad: 'Caracas', direccion: 'Av Libertador frente Centro Parima', contactoNombre: 'Pedro Garcia', contactoTelefono: '0412-5551234', verificada: true }, needs: [staticNeed(1,1,'Esmeril','activa'), staticNeed(2,1,'Agua mineral x200','activa'), staticNeed(3,1,'Mandarria','activa')], activaCount: 3, parcialCount: 0 }
-  const testOrgs: AyudaOrg[] = Array.from({ length: 6 }, (_, i) => ({ ...testOrg, orgId: i + 1, org: { ...testOrg.org, nombre: 'CENTRO ' + String(i + 1), ciudad: i < 3 ? 'Caracas' : 'La Guaira' } }))
-  return { orgs: testOrgs, generatedAt }
+  const d = new Date()
+  const generatedAt = String(d.getDate()) + '/' + String(d.getMonth() + 1) + '/' + String(d.getFullYear()) + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')
+  try {
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), 7000)
+    const hdrs = { 'User-Agent': 'Mozilla/5.0 Chrome/125', 'Accept': 'application/json', 'Referer': 'https://ayudaencamino.com/organizaciones' }
+    const [r1, r2] = await Promise.allSettled([
+      fetch('https://ayudaencamino.com/api/needs?urgencia=critica&status=activa', { cache: 'no-store', signal: ctrl.signal, headers: hdrs }),
+      fetch('https://ayudaencamino.com/api/needs?urgencia=critica&status=parcial', { cache: 'no-store', signal: ctrl.signal, headers: hdrs }),
+    ])
+    clearTimeout(timer)
+    const all: AyudaNeed[] = []
+    if (r1.status === 'fulfilled' && r1.value.ok) all.push(...(await r1.value.json() as AyudaNeed[]))
+    if (r2.status === 'fulfilled' && r2.value.ok) all.push(...(await r2.value.json() as AyudaNeed[]))
+    const seen = new Set<number>()
+    const unique = all.filter(n => { if (seen.has(n.id)) return false; seen.add(n.id); return true })
+    const byOrg = new Map<number, AyudaOrg>()
+    for (const n of unique) {
+      if (!byOrg.has(n.orgId)) byOrg.set(n.orgId, { orgId: n.orgId, org: n.organizacion, needs: [], activaCount: 0, parcialCount: 0 })
+      const g = byOrg.get(n.orgId)!
+      g.needs.push(n)
+      if (n.status === 'activa') g.activaCount++; else g.parcialCount++
+    }
+    return { orgs: [...byOrg.values()].sort((a, b) => b.needs.length - a.needs.length), generatedAt }
+  } catch {
+    return { orgs: [], generatedAt }
+  }
 }
 
 
@@ -354,16 +370,106 @@ export async function GET(request: Request) {
 
   // ── Instagram portrait image (1080×1350) ──
   if (format === 'instagram') {
-    // Step 3: test fetchAyudaOrgs() with static data
-    try {
-      const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
-      const { orgs, generatedAt } = await fetchAyudaOrgs()
-      return new Response(JSON.stringify({ ok: true, orgsCount: orgs.length, firstOrg: orgs[0]?.org.nombre, generatedAt, page }), {
-        headers: { 'Content-Type': 'application/json' },
+    const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
+    const { orgs, generatedAt } = await fetchAyudaOrgs()
+    const PER_PAGE = 5
+    const pageOrgs = orgs.slice((page - 1) * PER_PAGE, page * PER_PAGE)
+    const totalPages = Math.max(1, Math.ceil(orgs.length / PER_PAGE))
+    const pageLabel = String(page) + ' / ' + String(totalPages)
+    const orgsLabel = String(orgs.length) + ' orgs'
+    const placeholder = !pageOrgs.length
+
+    // Pre-serialize all dynamic data as strings (no raw numbers in JSX)
+    type Row = { name: string; tipo: string; location: string; addr: string; needs: string[]; more: string; contact: string; badge: string; badgeBg: string; verified: string }
+    const rows: Row[] = pageOrgs.map(g => {
+      const o = g.org
+      const needs = g.needs.slice(0, 3).map(n => {
+        const rem = n.cantidadNecesaria - n.cantidadComprometida - n.cantidadCumplida
+        return '• ' + igClip(n.nombreArticulo, 30) + (rem > 0 ? ' x' + String(rem) : '')
       })
-    } catch (e) {
-      return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { 'Content-Type': 'application/json' } })
-    }
+      return {
+        name: igClip(o.nombre, 32),
+        tipo: igClip(o.tipo.replace(/_/g, ' '), 26),
+        location: o.ciudad + ', ' + o.estado,
+        addr: igClip(o.direccion, 55),
+        needs,
+        more: g.needs.length > 3 ? '+' + String(g.needs.length - 3) + ' mas' : '',
+        contact: o.contactoTelefono ? (o.contactoNombre ? igClip(o.contactoNombre.split(' ')[0], 12) + ' ' : '') + o.contactoTelefono : (o.contactoNombre ? igClip(o.contactoNombre, 20) : 'Sin contacto'),
+        badge: g.activaCount > 0 ? 'CRITICA' : 'PARCIAL',
+        badgeBg: g.activaCount > 0 ? '#CF0921' : '#D97706',
+        verified: o.verificada ? 'Verificada' : '',
+      }
+    })
+
+    return new ImageResponse(
+      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', backgroundColor: '#F9FAFB', fontFamily: 'sans-serif' }}>
+
+        {/* Flag stripe */}
+        <div style={{ display: 'flex', height: 10 }}>
+          <div style={{ flex: 1, backgroundColor: '#FCD116' }} />
+          <div style={{ flex: 1, backgroundColor: '#003DA5' }} />
+          <div style={{ flex: 1, backgroundColor: '#CF0921' }} />
+        </div>
+
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingLeft: 36, paddingRight: 36, paddingTop: 16, paddingBottom: 16, backgroundColor: '#003DA5', height: 100 }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ color: '#FCD116', fontSize: 12, fontWeight: 900 }}>Levantando a Venezuela</div>
+            <div style={{ color: '#ffffff', fontSize: 21, fontWeight: 900, lineHeight: 1.1, marginTop: 3 }}>Coordinacion de Voluntarios</div>
+            <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, marginTop: 4 }}>{'ayudaencamino.com · ' + orgsLabel + ' con necesidades criticas'}</div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+            <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 9 }}>{generatedAt}</div>
+            <div style={{ display: 'flex', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20, paddingLeft: 12, paddingRight: 12, paddingTop: 4, paddingBottom: 4, marginTop: 6 }}>
+              <div style={{ color: '#ffffff', fontSize: 12, fontWeight: 700 }}>{pageLabel}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Cards */}
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, paddingLeft: 24, paddingRight: 24, paddingTop: 16, paddingBottom: 8, gap: 12 }}>
+          {placeholder ? (
+            <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ color: '#6B7280', fontSize: 16 }}>No hay datos disponibles</div>
+            </div>
+          ) : rows.map((r, i) => (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#ffffff', borderRadius: 8, paddingLeft: 16, paddingRight: 16, paddingTop: 12, paddingBottom: 12, flex: 1 }}>
+              {/* Name + badge */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, marginRight: 8 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: '#111827' }}>{r.name}</div>
+                  <div style={{ fontSize: 10, color: '#6B7280', marginTop: 1 }}>{r.tipo + ' · ' + r.location}</div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+                  <div style={{ display: 'flex', backgroundColor: r.badgeBg, borderRadius: 4, paddingLeft: 8, paddingRight: 8, paddingTop: 3, paddingBottom: 3 }}>
+                    <div style={{ color: '#ffffff', fontSize: 9, fontWeight: 800 }}>{r.badge}</div>
+                  </div>
+                  {r.verified ? <div style={{ fontSize: 9, color: '#059669', fontWeight: 700 }}>{r.verified}</div> : null}
+                </div>
+              </div>
+              {/* Address */}
+              <div style={{ fontSize: 10, color: '#374151', marginBottom: 6 }}>{r.addr}</div>
+              {/* Materials */}
+              <div style={{ display: 'flex', flexDirection: 'column', marginBottom: 6 }}>
+                {r.needs.map((n, ni) => (
+                  <div key={ni} style={{ fontSize: 10, color: '#111827', lineHeight: 1.4 }}>{n}</div>
+                ))}
+                {r.more ? <div style={{ fontSize: 9, color: '#6B7280' }}>{r.more}</div> : null}
+              </div>
+              {/* Contact */}
+              <div style={{ fontSize: 10, color: '#003DA5', fontWeight: 600 }}>{r.contact}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 10, paddingBottom: 10, backgroundColor: '#1F2937' }}>
+          <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9 }}>levantandoavenezuela.vercel.app · ayudaencamino.com · Solo urgencia CRITICA</div>
+        </div>
+
+      </div>,
+      { width: 1080, height: 1350 }
+    )
   }
 
   const { data: summary } = await supabase

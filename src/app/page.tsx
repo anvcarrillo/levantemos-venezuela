@@ -42,7 +42,7 @@ export default async function LandingPage() {
       {/* Banner de emergencia */}
       <div className="bg-[#CF0921] text-white rounded-xl text-center text-sm py-3 px-4 mb-10 flex items-center justify-center gap-2.5">
         <span className="w-2 h-2 bg-white rounded-full animate-pulse shrink-0" />
-        <span className="font-medium">Crisis activa — Terremoto Venezuela 2025 · Esta plataforma se actualiza en tiempo real con información de la comunidad</span>
+        <span className="font-medium">Crisis activa — Terremoto Venezuela 2026 · Esta plataforma se actualiza en tiempo real con información de la comunidad</span>
       </div>
 
       {/* Hero */}
