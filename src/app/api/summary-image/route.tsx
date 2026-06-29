@@ -368,11 +368,11 @@ export async function GET(request: Request) {
   const slug = searchParams.get('slug')
   const format = searchParams.get('format')
 
-  // ── Instagram infographic (1080×1350) ──
+  // ── Instagram infographic (1080×1350) — 2 columns ──
   if (format === 'instagram') {
     const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
     const { orgs, generatedAt } = await fetchAyudaOrgs()
-    const PER_PAGE = 4
+    const PER_PAGE = 6  // 3 rows × 2 cols
     const pageOrgs = orgs.slice((page - 1) * PER_PAGE, page * PER_PAGE)
     const totalPages = Math.max(1, Math.ceil(orgs.length / PER_PAGE))
     const pageLabel = String(page) + ' / ' + String(totalPages)
@@ -392,26 +392,33 @@ export async function GET(request: Request) {
       const o = g.org
       const top3 = g.needs.slice(0, 3).map(n => {
         const rem = n.cantidadNecesaria - n.cantidadComprometida - n.cantidadCumplida
-        return igClip(n.nombreArticulo, 24) + (rem > 0 ? ' (' + String(rem) + ')' : '')
+        return igClip(n.nombreArticulo, 20) + (rem > 0 ? ' (' + String(rem) + ')' : '')
       })
-      const extra = g.needs.length > 3 ? '  +' + String(g.needs.length - 3) + ' mas' : ''
+      const extra = g.needs.length > 3 ? ' +' + String(g.needs.length - 3) : ''
       const isCrit = g.activaCount > 0
       return {
         entryNum: String((page - 1) * PER_PAGE + idx + 1).padStart(2, '0'),
         itemsCount: String(g.needs.length),
-        name: igClip(o.nombre, 36),
-        tipo: igClip(o.tipo.replace(/_/g, ' '), 30),
+        name: igClip(o.nombre, 28),
+        tipo: igClip(o.tipo.replace(/_/g, ' '), 22),
         location: o.ciudad + ', ' + o.estado,
-        addr: igClip(o.direccion, 62),
-        materialsStr: top3.join('  ·  ') + extra,
+        addr: igClip(o.direccion, 46),
+        materialsStr: top3.join(' · ') + extra,
         contact: o.contactoTelefono
-          ? (o.contactoNombre ? igClip(o.contactoNombre.split(' ')[0], 16) + ': ' : '') + o.contactoTelefono
-          : (o.contactoNombre ? igClip(o.contactoNombre, 28) : 'Sin contacto registrado'),
+          ? (o.contactoNombre ? igClip(o.contactoNombre.split(' ')[0], 12) + ': ' : '') + o.contactoTelefono
+          : (o.contactoNombre ? igClip(o.contactoNombre, 22) : 'Sin contacto'),
         badge: isCrit ? 'CRITICA' : 'PARCIAL',
         badgeBg: isCrit ? '#CF0921' : '#D97706',
         verified: o.verificada,
       }
     })
+
+    // Split rows into pairs for 2-column layout
+    type Pair = { left: Row; right: Row | null }
+    const pairs: Pair[] = []
+    for (let i = 0; i < rows.length; i += 2) {
+      pairs.push({ left: rows[i], right: rows[i + 1] ?? null })
+    }
 
     return new ImageResponse(
       <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', backgroundColor: '#0F172A', fontFamily: 'sans-serif' }}>
@@ -424,94 +431,120 @@ export async function GET(request: Request) {
         </div>
 
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingLeft: 36, paddingRight: 36, paddingTop: 18, paddingBottom: 18, backgroundColor: '#003DA5' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingLeft: 32, paddingRight: 32, paddingTop: 16, paddingBottom: 16, backgroundColor: '#003DA5' }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ color: '#FCD116', fontSize: 12, fontWeight: 900, letterSpacing: 2 }}>LEVANTANDO A VENEZUELA</div>
-            <div style={{ color: '#ffffff', fontSize: 26, fontWeight: 900, lineHeight: 1.1, marginTop: 4 }}>Necesidades Criticas</div>
-            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 5 }}>ayudaencamino.com · Urgencia CRITICA</div>
+            <div style={{ color: '#FCD116', fontSize: 11, fontWeight: 900, letterSpacing: 2 }}>LEVANTANDO A VENEZUELA</div>
+            <div style={{ color: '#ffffff', fontSize: 24, fontWeight: 900, lineHeight: 1.1, marginTop: 3 }}>Necesidades Criticas</div>
+            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, marginTop: 4 }}>Coordinacion de Voluntarios · ayudaencamino.com</div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-            <div style={{ display: 'flex', backgroundColor: '#FCD116', borderRadius: 6, paddingLeft: 16, paddingRight: 16, paddingTop: 6, paddingBottom: 6 }}>
-              <div style={{ color: '#000000', fontSize: 15, fontWeight: 900 }}>{pageLabel}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5 }}>
+            <div style={{ display: 'flex', backgroundColor: '#FCD116', borderRadius: 6, paddingLeft: 14, paddingRight: 14, paddingTop: 5, paddingBottom: 5 }}>
+              <div style={{ color: '#000000', fontSize: 14, fontWeight: 900 }}>{pageLabel}</div>
             </div>
-            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>{generatedAt}</div>
+            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9 }}>{generatedAt}</div>
           </div>
         </div>
 
         {/* Stats strip */}
-        <div style={{ display: 'flex', backgroundColor: '#1E293B', height: 76 }}>
+        <div style={{ display: 'flex', backgroundColor: '#1E293B', height: 68 }}>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #334155' }}>
-            <div style={{ fontSize: 36, fontWeight: 900, color: '#FCD116', lineHeight: 1 }}>{totalOrgsLabel}</div>
-            <div style={{ fontSize: 10, color: '#64748B', marginTop: 4, letterSpacing: 1 }}>CENTROS</div>
+            <div style={{ fontSize: 32, fontWeight: 900, color: '#FCD116', lineHeight: 1 }}>{totalOrgsLabel}</div>
+            <div style={{ fontSize: 9, color: '#64748B', marginTop: 3, letterSpacing: 1 }}>CENTROS</div>
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #334155' }}>
-            <div style={{ fontSize: 36, fontWeight: 900, color: '#CF0921', lineHeight: 1 }}>{totalItemsLabel}</div>
-            <div style={{ fontSize: 10, color: '#64748B', marginTop: 4, letterSpacing: 1 }}>ITEMS SIN CUBRIR</div>
+            <div style={{ fontSize: 32, fontWeight: 900, color: '#CF0921', lineHeight: 1 }}>{totalItemsLabel}</div>
+            <div style={{ fontSize: 9, color: '#64748B', marginTop: 3, letterSpacing: 1 }}>ITEMS SIN CUBRIR</div>
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ fontSize: 36, fontWeight: 900, color: '#ffffff', lineHeight: 1 }}>{dateShort}</div>
-            <div style={{ fontSize: 10, color: '#64748B', marginTop: 4, letterSpacing: 1 }}>HOY</div>
+            <div style={{ fontSize: 32, fontWeight: 900, color: '#ffffff', lineHeight: 1 }}>{dateShort}</div>
+            <div style={{ fontSize: 9, color: '#64748B', marginTop: 3, letterSpacing: 1 }}>HOY</div>
           </div>
         </div>
 
-        {/* Org entries */}
+        {/* 2-column org rows */}
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-          {!rows.length ? (
+          {!pairs.length ? (
             <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ color: '#64748B', fontSize: 18 }}>No hay datos disponibles</div>
             </div>
-          ) : rows.map((r, i) => (
-            <div key={i} style={{ display: 'flex', flex: 1, borderBottom: '1px solid #1E293B' }}>
+          ) : pairs.map((pair, pi) => (
+            <div key={pi} style={{ display: 'flex', flex: 1, borderBottom: '1px solid #0F172A' }}>
 
-              {/* Left indicator column */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: 88, backgroundColor: r.badgeBg, paddingTop: 16, paddingBottom: 16 }}>
-                <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>N</div>
-                <div style={{ color: '#ffffff', fontSize: 38, fontWeight: 900, lineHeight: 1, marginTop: 2 }}>{r.entryNum}</div>
-                <div style={{ width: 32, height: 1, backgroundColor: 'rgba(255,255,255,0.25)', marginTop: 10, marginBottom: 10 }} />
-                <div style={{ color: '#ffffff', fontSize: 18, fontWeight: 900, lineHeight: 1 }}>{r.itemsCount}</div>
-                <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 9, marginTop: 3, letterSpacing: 0.5 }}>ITEMS</div>
-              </div>
-
-              {/* Right content */}
-              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, backgroundColor: '#ffffff', paddingLeft: 24, paddingRight: 28, paddingTop: 18, paddingBottom: 18 }}>
-
-                {/* Badge row */}
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-                  <div style={{ display: 'flex', backgroundColor: r.badgeBg, borderRadius: 4, paddingLeft: 9, paddingRight: 9, paddingTop: 3, paddingBottom: 3, marginRight: 10 }}>
-                    <div style={{ color: '#ffffff', fontSize: 10, fontWeight: 900, letterSpacing: 1 }}>{r.badge}</div>
+              {/* ── LEFT ENTRY ── */}
+              <div style={{ display: 'flex', flex: 1, borderRight: '2px solid #0F172A' }}>
+                {/* indicator */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: 60, backgroundColor: pair.left.badgeBg }}>
+                  <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 8, letterSpacing: 1 }}>N</div>
+                  <div style={{ color: '#ffffff', fontSize: 26, fontWeight: 900, lineHeight: 1, marginTop: 1 }}>{pair.left.entryNum}</div>
+                  <div style={{ width: 24, height: 1, backgroundColor: 'rgba(255,255,255,0.3)', marginTop: 7, marginBottom: 7 }} />
+                  <div style={{ color: '#ffffff', fontSize: 14, fontWeight: 900, lineHeight: 1 }}>{pair.left.itemsCount}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 8, marginTop: 2 }}>items</div>
+                </div>
+                {/* content */}
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, backgroundColor: '#ffffff', paddingLeft: 14, paddingRight: 14, paddingTop: 14, paddingBottom: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+                    <div style={{ display: 'flex', backgroundColor: pair.left.badgeBg, borderRadius: 3, paddingLeft: 6, paddingRight: 6, paddingTop: 2, paddingBottom: 2, marginRight: 6 }}>
+                      <div style={{ color: '#fff', fontSize: 8, fontWeight: 900 }}>{pair.left.badge}</div>
+                    </div>
+                    {pair.left.verified ? <div style={{ fontSize: 8, color: '#059669', fontWeight: 800 }}>VERIF.</div> : null}
                   </div>
-                  {r.verified ? <div style={{ fontSize: 11, color: '#059669', fontWeight: 800 }}>VERIFICADA</div> : null}
+                  <div style={{ fontSize: 14, fontWeight: 900, color: '#0F172A', lineHeight: 1.2, marginBottom: 3 }}>{pair.left.name}</div>
+                  <div style={{ fontSize: 9, color: '#94A3B8', marginBottom: 7 }}>{pair.left.tipo + ' · ' + pair.left.location}</div>
+                  <div style={{ fontSize: 11, color: '#475569', fontWeight: 600, marginBottom: 8 }}>{pair.left.addr}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#FFFBEB', borderRadius: 4, paddingLeft: 10, paddingRight: 10, paddingTop: 7, paddingBottom: 7, marginBottom: 8, borderLeft: '3px solid #FCD116' }}>
+                    <div style={{ fontSize: 7, fontWeight: 900, color: '#92400E', letterSpacing: 1, marginBottom: 4 }}>MATERIALES</div>
+                    <div style={{ fontSize: 11, color: '#78350F', lineHeight: 1.4 }}>{pair.left.materialsStr}</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <div style={{ fontSize: 7, fontWeight: 900, color: '#003DA5', letterSpacing: 1, marginRight: 5 }}>CONTACTO</div>
+                    <div style={{ fontSize: 11, color: '#1D4ED8', fontWeight: 700 }}>{pair.left.contact}</div>
+                  </div>
                 </div>
-
-                {/* Org name */}
-                <div style={{ fontSize: 19, fontWeight: 900, color: '#0F172A', lineHeight: 1.2, marginBottom: 5 }}>{r.name}</div>
-
-                {/* Type + location */}
-                <div style={{ fontSize: 12, color: '#94A3B8', fontWeight: 500, marginBottom: 10 }}>{r.tipo + '  ·  ' + r.location}</div>
-
-                {/* Address */}
-                <div style={{ fontSize: 13, color: '#475569', fontWeight: 600, marginBottom: 12 }}>{r.addr}</div>
-
-                {/* Materials box */}
-                <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#FFFBEB', borderRadius: 6, paddingLeft: 14, paddingRight: 14, paddingTop: 10, paddingBottom: 10, marginBottom: 12, borderLeft: '4px solid #FCD116' }}>
-                  <div style={{ fontSize: 9, fontWeight: 900, color: '#92400E', letterSpacing: 1, marginBottom: 5 }}>MATERIALES NECESARIOS</div>
-                  <div style={{ fontSize: 13, color: '#78350F', lineHeight: 1.5 }}>{r.materialsStr}</div>
-                </div>
-
-                {/* Contact */}
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ fontSize: 10, fontWeight: 900, color: '#003DA5', letterSpacing: 1, marginRight: 10 }}>CONTACTO</div>
-                  <div style={{ fontSize: 13, color: '#1D4ED8', fontWeight: 700 }}>{r.contact}</div>
-                </div>
-
               </div>
+
+              {/* ── RIGHT ENTRY ── */}
+              {pair.right ? (
+                <div style={{ display: 'flex', flex: 1 }}>
+                  {/* indicator */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: 60, backgroundColor: pair.right.badgeBg }}>
+                    <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 8, letterSpacing: 1 }}>N</div>
+                    <div style={{ color: '#ffffff', fontSize: 26, fontWeight: 900, lineHeight: 1, marginTop: 1 }}>{pair.right.entryNum}</div>
+                    <div style={{ width: 24, height: 1, backgroundColor: 'rgba(255,255,255,0.3)', marginTop: 7, marginBottom: 7 }} />
+                    <div style={{ color: '#ffffff', fontSize: 14, fontWeight: 900, lineHeight: 1 }}>{pair.right.itemsCount}</div>
+                    <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 8, marginTop: 2 }}>items</div>
+                  </div>
+                  {/* content */}
+                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, backgroundColor: '#F8FAFC', paddingLeft: 14, paddingRight: 14, paddingTop: 14, paddingBottom: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+                      <div style={{ display: 'flex', backgroundColor: pair.right.badgeBg, borderRadius: 3, paddingLeft: 6, paddingRight: 6, paddingTop: 2, paddingBottom: 2, marginRight: 6 }}>
+                        <div style={{ color: '#fff', fontSize: 8, fontWeight: 900 }}>{pair.right.badge}</div>
+                      </div>
+                      {pair.right.verified ? <div style={{ fontSize: 8, color: '#059669', fontWeight: 800 }}>VERIF.</div> : null}
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 900, color: '#0F172A', lineHeight: 1.2, marginBottom: 3 }}>{pair.right.name}</div>
+                    <div style={{ fontSize: 9, color: '#94A3B8', marginBottom: 7 }}>{pair.right.tipo + ' · ' + pair.right.location}</div>
+                    <div style={{ fontSize: 11, color: '#475569', fontWeight: 600, marginBottom: 8 }}>{pair.right.addr}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#FFFBEB', borderRadius: 4, paddingLeft: 10, paddingRight: 10, paddingTop: 7, paddingBottom: 7, marginBottom: 8, borderLeft: '3px solid #FCD116' }}>
+                      <div style={{ fontSize: 7, fontWeight: 900, color: '#92400E', letterSpacing: 1, marginBottom: 4 }}>MATERIALES</div>
+                      <div style={{ fontSize: 11, color: '#78350F', lineHeight: 1.4 }}>{pair.right.materialsStr}</div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <div style={{ fontSize: 7, fontWeight: 900, color: '#003DA5', letterSpacing: 1, marginRight: 5 }}>CONTACTO</div>
+                      <div style={{ fontSize: 11, color: '#1D4ED8', fontWeight: 700 }}>{pair.right.contact}</div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flex: 1, backgroundColor: '#111827' }} />
+              )}
+
             </div>
           ))}
         </div>
 
         {/* Footer */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', paddingTop: 11, paddingBottom: 11, backgroundColor: '#0F172A' }}>
-          <div style={{ color: '#334155', fontSize: 10 }}>levantandoavenezuela.vercel.app  ·  ayudaencamino.com  ·  Solo urgencia CRITICA</div>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', paddingTop: 10, paddingBottom: 10, backgroundColor: '#0F172A' }}>
+          <div style={{ color: '#334155', fontSize: 9 }}>levantandoavenezuela.vercel.app  ·  ayudaencamino.com  ·  Solo urgencia CRITICA</div>
         </div>
 
       </div>,
