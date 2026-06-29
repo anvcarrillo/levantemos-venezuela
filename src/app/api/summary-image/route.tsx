@@ -489,22 +489,13 @@ export async function GET(request: Request) {
       )
     }
 
-    const PER_PAGE = 6
-    const pageOrgs = orgs.slice((page - 1) * PER_PAGE, page * PER_PAGE)
-    const totalPages = Math.ceil(orgs.length / PER_PAGE)
-    if (!pageOrgs.length) return new Response('Page not found', { status: 404 })
-
-    const totalNeeds = orgs.reduce((s, g) => s + g.needs.length, 0)
-
+    // Minimal test: just confirm 1080x1350 renders at all in this route
     return new ImageResponse(
-      <InstagramPage
-        orgs={orgs}
-        pageOrgs={pageOrgs}
-        page={page}
-        totalPages={totalPages}
-        generatedAt={generatedAt}
-        totalNeeds={totalNeeds}
-      />,
+      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', backgroundColor: '#003DA5', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: '#FCD116', fontSize: 40, fontWeight: 900 }}>Levantando a Venezuela</div>
+        <div style={{ color: '#ffffff', fontSize: 18, marginTop: 16 }}>Pagina {page} - {orgs.length} orgs</div>
+        <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 8 }}>{generatedAt}</div>
+      </div>,
       { width: 1080, height: 1350 }
     )
   }
