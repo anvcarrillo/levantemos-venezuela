@@ -87,24 +87,24 @@ async function fetchAyudaEnCaminoBlock(): Promise<{ block: string; status: strin
       '',
     ]
 
-    for (const { org, needs } of sortedOrgs) {
+    // Cap at top 12 orgs, top 10 needs each — keeps the block focused and manageable
+    for (const { org, needs } of sortedOrgs.slice(0, 12)) {
       const tipo = org.tipo.replace(/_/g, ' ')
       lines.push(`📍 ${org.nombre} [${tipo}]${org.verificada ? ' ✓verificada' : ''}`)
-      lines.push(`   Dirección: ${org.direccion} · ${org.ciudad}, ${org.estado}`)
+      lines.push(`   Dir: ${org.direccion}, ${org.ciudad}, ${org.estado}`)
       const contacto = [org.contactoNombre, org.contactoTelefono].filter(Boolean).join(' · ')
-      if (contacto) lines.push(`   Contacto: ${contacto}`)
-      lines.push(`   Necesidades (urgencia crítica):`)
-
-      for (const need of needs) {
+      if (contacto) lines.push(`   Tel: ${contacto}`)
+      for (const need of needs.slice(0, 10)) {
         const remaining = need.cantidadNecesaria - need.cantidadComprometida - need.cantidadCumplida
         const tag = need.status === 'parcial' ? 'PARCIAL' : 'ACTIVA'
-        const desc = need.descripcion ? ` — ${need.descripcion}` : ''
-        lines.push(`   • [${tag}] ${need.nombreArticulo}: ${remaining} pendientes de ${need.cantidadNecesaria}${desc}`)
+        lines.push(`   • [${tag}] ${need.nombreArticulo}: ${remaining} pendientes`)
       }
+      if (needs.length > 10) lines.push(`   • ... +${needs.length - 10} items mas`)
       lines.push('')
     }
+    if (sortedOrgs.length > 12) lines.push(`(+${sortedOrgs.length - 12} organizaciones adicionales no listadas)`)
 
-    return { block: lines.join('\n').slice(0, 7000), status: `ok_${unique.length}_items` }
+    return { block: lines.join('\n'), status: `ok_${unique.length}_items` }
   } catch (err) {
     clearTimeout(timer)
     return { block: '', status: `error_${String(err).slice(0, 80)}` }
@@ -277,7 +277,7 @@ export async function POST(request: Request) {
 
   const message = await anthropic.messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 6000,
+    max_tokens: 8000,
     messages: [
       {
         role: 'user',
@@ -348,5 +348,8 @@ ${resourcesBlock}`,
     id: data.id,
     categories_analyzed: parsed.category_summaries.length,
     ayuda_status: ayudaStatus,
+    stop_reason: message.stop_reason,
+    parse_error: parseError || null,
+    raw_snippet: rawClaudeText.slice(0, 300),
   })
 }
