@@ -44,31 +44,14 @@ async function fetchAyudaOrgs(): Promise<{ orgs: AyudaOrg[]; generatedAt: string
   const generatedAt = new Date().toLocaleString('es-VE', {
     day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Caracas',
   })
-  try {
-    const ctrl = new AbortController()
-    const timer = setTimeout(() => ctrl.abort(), 14000)
-    const headers = { 'User-Agent': 'Mozilla/5.0 Chrome/125', 'Accept': 'application/json', 'Referer': 'https://ayudaencamino.com/organizaciones' }
-    const [r1, r2] = await Promise.allSettled([
-      fetch('https://ayudaencamino.com/api/needs?urgencia=critica&status=activa', { cache: 'no-store', signal: ctrl.signal, headers }),
-      fetch('https://ayudaencamino.com/api/needs?urgencia=critica&status=parcial', { cache: 'no-store', signal: ctrl.signal, headers }),
-    ])
-    clearTimeout(timer)
-    const all: AyudaNeed[] = []
-    if (r1.status === 'fulfilled' && r1.value.ok) all.push(...(await r1.value.json() as AyudaNeed[]))
-    if (r2.status === 'fulfilled' && r2.value.ok) all.push(...(await r2.value.json() as AyudaNeed[]))
-    const seen = new Set<number>()
-    const unique = all.filter(n => { if (seen.has(n.id)) return false; seen.add(n.id); return true })
-    const byOrg = new Map<number, AyudaOrg>()
-    for (const n of unique) {
-      if (!byOrg.has(n.orgId)) byOrg.set(n.orgId, { orgId: n.orgId, org: n.organizacion, needs: [], activaCount: 0, parcialCount: 0 })
-      const g = byOrg.get(n.orgId)!
-      g.needs.push(n)
-      if (n.status === 'activa') { g.activaCount++ } else { g.parcialCount++ }
-    }
-    return { orgs: [...byOrg.values()].sort((a, b) => b.needs.length - a.needs.length), generatedAt }
-  } catch {
-    return { orgs: [], generatedAt }
-  }
+  // DEBUG: Return static data while testing Satori rendering
+  const staticNeed = (id: number, orgId: number, nombre: string, status: string): AyudaNeed => ({
+    id, orgId, nombreArticulo: nombre, cantidadNecesaria: 5, cantidadComprometida: 0, cantidadCumplida: 0, status,
+    organizacion: { nombre: 'TEST ORG', tipo: 'centro_acopio', estado: 'Caracas', ciudad: 'Caracas', direccion: 'Av Test 123', contactoNombre: 'Juan', contactoTelefono: '0412-0000000', verificada: true },
+  })
+  const testOrg: AyudaOrg = { orgId: 1, org: { nombre: 'CENTRO DE ACOPIO PARIMA', tipo: 'centro_acopio', estado: 'Caracas DC', ciudad: 'Caracas', direccion: 'Av Libertador frente Centro Parima', contactoNombre: 'Pedro Garcia', contactoTelefono: '0412-5551234', verificada: true }, needs: [staticNeed(1,1,'Esmeril','activa'), staticNeed(2,1,'Agua mineral x200','activa'), staticNeed(3,1,'Mandarria','activa')], activaCount: 3, parcialCount: 0 }
+  const testOrgs: AyudaOrg[] = Array.from({ length: 6 }, (_, i) => ({ ...testOrg, orgId: i + 1, org: { ...testOrg.org, nombre: 'CENTRO ' + String(i + 1), ciudad: i < 3 ? 'Caracas' : 'La Guaira' } }))
+  return { orgs: testOrgs, generatedAt }
 }
 
 // ─── Instagram portrait image (1080×1350) — card layout ──────────────────────
