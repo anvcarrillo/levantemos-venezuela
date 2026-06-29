@@ -372,82 +372,85 @@ export async function GET(request: Request) {
   if (format === 'instagram') {
     const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
     const { orgs, generatedAt } = await fetchAyudaOrgs()
-    const PER_PAGE = 5
+    const PER_PAGE = 4
     const pageOrgs = orgs.slice((page - 1) * PER_PAGE, page * PER_PAGE)
     const totalPages = Math.max(1, Math.ceil(orgs.length / PER_PAGE))
     const pageLabel = String(page) + ' / ' + String(totalPages)
     const totalItems = orgs.reduce((s, g) => s + g.needs.length, 0)
     const totalItemsLabel = String(totalItems)
     const totalOrgsLabel = String(orgs.length)
+    const now = new Date()
+    const dateShort = String(now.getDate()) + '/' + String(now.getMonth() + 1)
 
-    // Pre-serialize all org data as plain strings
     type Row = {
+      entryNum: string; itemsCount: string
       name: string; tipo: string; location: string; addr: string
       materialsStr: string; contact: string
-      badge: string; badgeBg: string; borderColor: string; verified: boolean
+      badge: string; badgeBg: string; verified: boolean
     }
-    const rows: Row[] = pageOrgs.map(g => {
+    const rows: Row[] = pageOrgs.map((g, idx) => {
       const o = g.org
       const top3 = g.needs.slice(0, 3).map(n => {
         const rem = n.cantidadNecesaria - n.cantidadComprometida - n.cantidadCumplida
-        return igClip(n.nombreArticulo, 22) + (rem > 0 ? ' (x' + String(rem) + ')' : '')
+        return igClip(n.nombreArticulo, 24) + (rem > 0 ? ' (' + String(rem) + ')' : '')
       })
-      const extra = g.needs.length > 3 ? ' +' + String(g.needs.length - 3) + ' mas' : ''
+      const extra = g.needs.length > 3 ? '  +' + String(g.needs.length - 3) + ' mas' : ''
       const isCrit = g.activaCount > 0
       return {
-        name: igClip(o.nombre, 34),
-        tipo: igClip(o.tipo.replace(/_/g, ' '), 28),
+        entryNum: String((page - 1) * PER_PAGE + idx + 1).padStart(2, '0'),
+        itemsCount: String(g.needs.length),
+        name: igClip(o.nombre, 36),
+        tipo: igClip(o.tipo.replace(/_/g, ' '), 30),
         location: o.ciudad + ', ' + o.estado,
-        addr: igClip(o.direccion, 58),
-        materialsStr: top3.join(' · ') + extra,
+        addr: igClip(o.direccion, 62),
+        materialsStr: top3.join('  ·  ') + extra,
         contact: o.contactoTelefono
-          ? (o.contactoNombre ? igClip(o.contactoNombre.split(' ')[0], 14) + ': ' : '') + o.contactoTelefono
-          : (o.contactoNombre ? igClip(o.contactoNombre, 24) : 'Sin contacto registrado'),
+          ? (o.contactoNombre ? igClip(o.contactoNombre.split(' ')[0], 16) + ': ' : '') + o.contactoTelefono
+          : (o.contactoNombre ? igClip(o.contactoNombre, 28) : 'Sin contacto registrado'),
         badge: isCrit ? 'CRITICA' : 'PARCIAL',
         badgeBg: isCrit ? '#CF0921' : '#D97706',
-        borderColor: isCrit ? '#CF0921' : '#F59E0B',
         verified: o.verificada,
       }
     })
 
     return new ImageResponse(
-      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', backgroundColor: '#F1F5F9', fontFamily: 'sans-serif' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', backgroundColor: '#0F172A', fontFamily: 'sans-serif' }}>
 
-        {/* Venezuelan flag stripe */}
-        <div style={{ display: 'flex', height: 12 }}>
+        {/* Flag stripe */}
+        <div style={{ display: 'flex', height: 10 }}>
           <div style={{ flex: 1, backgroundColor: '#FCD116' }} />
           <div style={{ flex: 1, backgroundColor: '#003DA5' }} />
           <div style={{ flex: 1, backgroundColor: '#CF0921' }} />
         </div>
 
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingLeft: 32, paddingRight: 32, paddingTop: 14, paddingBottom: 14, backgroundColor: '#003DA5' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingLeft: 36, paddingRight: 36, paddingTop: 18, paddingBottom: 18, backgroundColor: '#003DA5' }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ color: '#FCD116', fontSize: 11, fontWeight: 900, letterSpacing: 1 }}>LEVANTANDO A VENEZUELA</div>
-            <div style={{ color: '#ffffff', fontSize: 22, fontWeight: 900, lineHeight: 1.15, marginTop: 2 }}>Necesidades Criticas</div>
-            <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, marginTop: 3 }}>Coordinacion de Voluntarios · ayudaencamino.com</div>
+            <div style={{ color: '#FCD116', fontSize: 12, fontWeight: 900, letterSpacing: 2 }}>LEVANTANDO A VENEZUELA</div>
+            <div style={{ color: '#ffffff', fontSize: 26, fontWeight: 900, lineHeight: 1.1, marginTop: 4 }}>Necesidades Criticas</div>
+            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 5 }}>ayudaencamino.com · Urgencia CRITICA</div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-            <div style={{ display: 'flex', backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 20, paddingLeft: 14, paddingRight: 14, paddingTop: 5, paddingBottom: 5 }}>
-              <div style={{ color: '#FCD116', fontSize: 13, fontWeight: 900 }}>{pageLabel}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+            <div style={{ display: 'flex', backgroundColor: '#FCD116', borderRadius: 6, paddingLeft: 16, paddingRight: 16, paddingTop: 6, paddingBottom: 6 }}>
+              <div style={{ color: '#000000', fontSize: 15, fontWeight: 900 }}>{pageLabel}</div>
             </div>
-            <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 9, marginTop: 6 }}>{generatedAt}</div>
+            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>{generatedAt}</div>
           </div>
         </div>
 
         {/* Stats strip */}
-        <div style={{ display: 'flex', backgroundColor: '#0F172A', height: 60 }}>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #1E293B' }}>
-            <div style={{ fontSize: 26, fontWeight: 900, color: '#FCD116', lineHeight: 1 }}>{totalOrgsLabel}</div>
-            <div style={{ fontSize: 8, color: '#64748B', marginTop: 3, letterSpacing: 1 }}>CENTROS</div>
+        <div style={{ display: 'flex', backgroundColor: '#1E293B', height: 76 }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #334155' }}>
+            <div style={{ fontSize: 36, fontWeight: 900, color: '#FCD116', lineHeight: 1 }}>{totalOrgsLabel}</div>
+            <div style={{ fontSize: 10, color: '#64748B', marginTop: 4, letterSpacing: 1 }}>CENTROS</div>
           </div>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #1E293B' }}>
-            <div style={{ fontSize: 26, fontWeight: 900, color: '#CF0921', lineHeight: 1 }}>{totalItemsLabel}</div>
-            <div style={{ fontSize: 8, color: '#64748B', marginTop: 3, letterSpacing: 1 }}>ITEMS SIN CUBRIR</div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #334155' }}>
+            <div style={{ fontSize: 36, fontWeight: 900, color: '#CF0921', lineHeight: 1 }}>{totalItemsLabel}</div>
+            <div style={{ fontSize: 10, color: '#64748B', marginTop: 4, letterSpacing: 1 }}>ITEMS SIN CUBRIR</div>
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ fontSize: 26, fontWeight: 900, color: '#ffffff', lineHeight: 1 }}>HOY</div>
-            <div style={{ fontSize: 8, color: '#64748B', marginTop: 3, letterSpacing: 1 }}>ACTUALIZADO</div>
+            <div style={{ fontSize: 36, fontWeight: 900, color: '#ffffff', lineHeight: 1 }}>{dateShort}</div>
+            <div style={{ fontSize: 10, color: '#64748B', marginTop: 4, letterSpacing: 1 }}>HOY</div>
           </div>
         </div>
 
@@ -455,37 +458,50 @@ export async function GET(request: Request) {
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
           {!rows.length ? (
             <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ color: '#94A3B8', fontSize: 16 }}>No hay datos disponibles</div>
+              <div style={{ color: '#64748B', fontSize: 18 }}>No hay datos disponibles</div>
             </div>
           ) : rows.map((r, i) => (
-            <div key={i} style={{ display: 'flex', flex: 1, backgroundColor: i % 2 === 0 ? '#ffffff' : '#F8FAFC', borderLeft: '7px solid ' + r.borderColor, paddingLeft: 22, paddingRight: 28, paddingTop: 14, paddingBottom: 14, borderBottom: '1px solid #E2E8F0' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+            <div key={i} style={{ display: 'flex', flex: 1, borderBottom: '1px solid #1E293B' }}>
 
-                {/* Line 1: badge + name + verified */}
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: 5 }}>
-                  <div style={{ display: 'flex', backgroundColor: r.badgeBg, borderRadius: 3, paddingLeft: 7, paddingRight: 7, paddingTop: 2, paddingBottom: 2, marginRight: 10 }}>
-                    <div style={{ color: '#ffffff', fontSize: 8, fontWeight: 900, letterSpacing: 0.5 }}>{r.badge}</div>
+              {/* Left indicator column */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: 88, backgroundColor: r.badgeBg, paddingTop: 16, paddingBottom: 16 }}>
+                <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>N</div>
+                <div style={{ color: '#ffffff', fontSize: 38, fontWeight: 900, lineHeight: 1, marginTop: 2 }}>{r.entryNum}</div>
+                <div style={{ width: 32, height: 1, backgroundColor: 'rgba(255,255,255,0.25)', marginTop: 10, marginBottom: 10 }} />
+                <div style={{ color: '#ffffff', fontSize: 18, fontWeight: 900, lineHeight: 1 }}>{r.itemsCount}</div>
+                <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 9, marginTop: 3, letterSpacing: 0.5 }}>ITEMS</div>
+              </div>
+
+              {/* Right content */}
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, backgroundColor: '#ffffff', paddingLeft: 24, paddingRight: 28, paddingTop: 18, paddingBottom: 18 }}>
+
+                {/* Badge row */}
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', backgroundColor: r.badgeBg, borderRadius: 4, paddingLeft: 9, paddingRight: 9, paddingTop: 3, paddingBottom: 3, marginRight: 10 }}>
+                    <div style={{ color: '#ffffff', fontSize: 10, fontWeight: 900, letterSpacing: 1 }}>{r.badge}</div>
                   </div>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: '#0F172A', flex: 1 }}>{r.name}</div>
-                  {r.verified ? <div style={{ fontSize: 9, color: '#059669', fontWeight: 700, marginLeft: 8 }}>VERIF.</div> : null}
+                  {r.verified ? <div style={{ fontSize: 11, color: '#059669', fontWeight: 800 }}>VERIFICADA</div> : null}
                 </div>
 
-                {/* Line 2: tipo + location */}
-                <div style={{ fontSize: 10, color: '#94A3B8', marginBottom: 6, fontWeight: 500 }}>{r.tipo + ' · ' + r.location}</div>
+                {/* Org name */}
+                <div style={{ fontSize: 19, fontWeight: 900, color: '#0F172A', lineHeight: 1.2, marginBottom: 5 }}>{r.name}</div>
 
-                {/* Line 3: address */}
-                <div style={{ fontSize: 11, color: '#475569', fontWeight: 600, marginBottom: 8 }}>{r.addr}</div>
+                {/* Type + location */}
+                <div style={{ fontSize: 12, color: '#94A3B8', fontWeight: 500, marginBottom: 10 }}>{r.tipo + '  ·  ' + r.location}</div>
 
-                {/* Line 4: materials box */}
-                <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#FEFCE8', borderRadius: 5, paddingLeft: 10, paddingRight: 10, paddingTop: 6, paddingBottom: 6, marginBottom: 8, borderLeft: '3px solid #FCD116' }}>
-                  <div style={{ fontSize: 8, fontWeight: 800, color: '#713F12', letterSpacing: 0.8, marginBottom: 3 }}>MATERIALES NECESARIOS</div>
-                  <div style={{ fontSize: 10, color: '#78350F', lineHeight: 1.4 }}>{r.materialsStr}</div>
+                {/* Address */}
+                <div style={{ fontSize: 13, color: '#475569', fontWeight: 600, marginBottom: 12 }}>{r.addr}</div>
+
+                {/* Materials box */}
+                <div style={{ display: 'flex', flexDirection: 'column', backgroundColor: '#FFFBEB', borderRadius: 6, paddingLeft: 14, paddingRight: 14, paddingTop: 10, paddingBottom: 10, marginBottom: 12, borderLeft: '4px solid #FCD116' }}>
+                  <div style={{ fontSize: 9, fontWeight: 900, color: '#92400E', letterSpacing: 1, marginBottom: 5 }}>MATERIALES NECESARIOS</div>
+                  <div style={{ fontSize: 13, color: '#78350F', lineHeight: 1.5 }}>{r.materialsStr}</div>
                 </div>
 
-                {/* Line 5: contact */}
+                {/* Contact */}
                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ fontSize: 9, fontWeight: 800, color: '#003DA5', marginRight: 6 }}>CONTACTO</div>
-                  <div style={{ fontSize: 10, color: '#1E40AF', fontWeight: 600 }}>{r.contact}</div>
+                  <div style={{ fontSize: 10, fontWeight: 900, color: '#003DA5', letterSpacing: 1, marginRight: 10 }}>CONTACTO</div>
+                  <div style={{ fontSize: 13, color: '#1D4ED8', fontWeight: 700 }}>{r.contact}</div>
                 </div>
 
               </div>
@@ -494,8 +510,8 @@ export async function GET(request: Request) {
         </div>
 
         {/* Footer */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', paddingTop: 9, paddingBottom: 9, backgroundColor: '#0F172A' }}>
-          <div style={{ color: '#475569', fontSize: 9 }}>levantandoavenezuela.vercel.app · Datos: ayudaencamino.com · Solo urgencia CRITICA</div>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', paddingTop: 11, paddingBottom: 11, backgroundColor: '#0F172A' }}>
+          <div style={{ color: '#334155', fontSize: 10 }}>levantandoavenezuela.vercel.app  ·  ayudaencamino.com  ·  Solo urgencia CRITICA</div>
         </div>
 
       </div>,
