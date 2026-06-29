@@ -54,128 +54,6 @@ async function fetchAyudaOrgs(): Promise<{ orgs: AyudaOrg[]; generatedAt: string
   return { orgs: testOrgs, generatedAt }
 }
 
-// ─── Instagram portrait image (1080×1350) — card layout ──────────────────────
-// Each page shows 6 org cards in a 2-column grid
-
-function OrgCard({ g }: { g: AyudaOrg }) {
-  const org = g.org
-  const nivelBg = g.activaCount > 0 ? '#CF0921' : '#D97706'
-  const nivelLabel = g.activaCount > 0 ? 'CRITICA' : 'PARCIAL'
-  const tipo = org.tipo.replace(/_/g, ' ')
-  const topNeeds = g.needs.slice(0, 3).map(n => {
-    const rem = n.cantidadNecesaria - n.cantidadComprometida - n.cantidadCumplida
-    return igClip(n.nombreArticulo, 24) + (rem > 0 ? ' ×' + String(rem) : '')
-  })
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: 480, backgroundColor: '#ffffff', borderRadius: 10, margin: 10, padding: 16, border: '1px solid #E5E7EB' }}>
-      {/* Top row: name + badge */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, marginRight: 8 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: '#111827', lineHeight: 1.2 }}>{igClip(org.nombre, 30)}</div>
-          <div style={{ fontSize: 9, color: '#6B7280', marginTop: 2 }}>{igClip(tipo, 26)}</div>
-        </div>
-        <div style={{ display: 'flex', backgroundColor: nivelBg, borderRadius: 4, padding: '3px 7px' }}>
-          <div style={{ color: '#ffffff', fontSize: 8, fontWeight: 800 }}>{nivelLabel}</div>
-        </div>
-      </div>
-
-      {/* Address */}
-      <div style={{ display: 'flex', marginBottom: 8 }}>
-        <div style={{ fontSize: 9, color: '#374151', lineHeight: 1.3 }}>
-          {igClip(org.direccion, 55)} — {org.ciudad}, {org.estado}
-        </div>
-      </div>
-
-      {/* Materials */}
-      <div style={{ display: 'flex', flexDirection: 'column', marginBottom: 8 }}>
-        <div style={{ fontSize: 8, fontWeight: 700, color: '#003DA5', marginBottom: 3 }}>MATERIALES NECESARIOS</div>
-        {topNeeds.map((need, ni) => (
-          <div key={ni} style={{ display: 'flex', fontSize: 9, color: '#374151', marginBottom: 1 }}>
-            {'• '}{need}
-          </div>
-        ))}
-        {g.needs.length > 3 ? <div style={{ fontSize: 8, color: '#6B7280' }}>{'+'}{String(g.needs.length - 3)}{' mas...'}</div> : null}
-      </div>
-
-      {/* Contact + verified */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {org.contactoNombre ? <div style={{ fontSize: 9, color: '#111827', fontWeight: 600 }}>{igClip(org.contactoNombre, 22)}</div> : null}
-          {org.contactoTelefono ? <div style={{ fontSize: 9, color: '#003DA5' }}>{org.contactoTelefono}</div> : null}
-          {!org.contactoNombre && !org.contactoTelefono ? <div style={{ fontSize: 9, color: '#6B7280' }}>Contacto no disponible</div> : null}
-        </div>
-        {org.verificada ? <div style={{ fontSize: 8, color: '#059669', fontWeight: 700, marginLeft: 6 }}>Verificada</div> : null}
-      </div>
-    </div>
-  )
-}
-
-function InstagramPage({
-  orgs,
-  pageOrgs,
-  page,
-  totalPages,
-  generatedAt,
-  totalNeeds,
-}: {
-  orgs: AyudaOrg[]
-  pageOrgs: AyudaOrg[]
-  page: number
-  totalPages: number
-  generatedAt: string
-  totalNeeds: number
-}) {
-  const leftCol = pageOrgs.filter((_, i) => i % 2 === 0)
-  const rightCol = pageOrgs.filter((_, i) => i % 2 === 1)
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', backgroundColor: '#F9FAFB', fontFamily: 'sans-serif' }}>
-
-      {/* Flag stripe */}
-      <div style={{ display: 'flex', height: 10 }}>
-        <div style={{ flex: 1, backgroundColor: '#FCD116' }} />
-        <div style={{ flex: 1, backgroundColor: '#003DA5' }} />
-        <div style={{ flex: 1, backgroundColor: '#CF0921' }} />
-      </div>
-
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 30px', backgroundColor: '#003DA5' }}>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ color: '#FCD116', fontSize: 13, fontWeight: 900 }}>Levantando a Venezuela</div>
-          <div style={{ color: '#ffffff', fontSize: 22, fontWeight: 900, lineHeight: 1.1 }}>Coordinacion de Voluntarios</div>
-          <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 10, marginTop: 3 }}>
-            {orgs.length} centros · {totalNeeds} necesidades criticas
-          </div>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-          <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 9 }}>{generatedAt}</div>
-          <div style={{ display: 'flex', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20, padding: '3px 12px', marginTop: 6 }}>
-            <div style={{ color: '#ffffff', fontSize: 11, fontWeight: 700 }}>{page} / {totalPages}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* 2-column card grid */}
-      <div style={{ display: 'flex', flex: 1, padding: '0 10px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', width: 500 }}>
-          {leftCol.map(g => <OrgCard key={String(g.orgId)} g={g} />)}
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', width: 500 }}>
-          {rightCol.map(g => <OrgCard key={String(g.orgId)} g={g} />)}
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 40px', backgroundColor: '#1F2937' }}>
-        <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10 }}>
-          levantandoavenezuela.vercel.app · ayudaencamino.com · Solo urgencia CRITICA
-        </div>
-      </div>
-
-    </div>
-  )
-}
 
 type CategorySummary = {
   category: string
@@ -476,28 +354,10 @@ export async function GET(request: Request) {
 
   // ── Instagram portrait image (1080×1350) ──
   if (format === 'instagram') {
-    const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
-    const { orgs, generatedAt } = await fetchAyudaOrgs()
-
-    if (!orgs.length) {
-      return new ImageResponse(
-        <div style={{ display: 'flex', width: '100%', height: '100%', backgroundColor: '#003DA5', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-          <div style={{ color: '#FCD116', fontSize: 30, fontWeight: 900 }}>Levantando a Venezuela</div>
-          <div style={{ color: '#ffffff', fontSize: 16, marginTop: 20 }}>Datos no disponibles temporalmente</div>
-        </div>,
-        { width: 1080, height: 1350 }
-      )
-    }
-
-    // Minimal test: just confirm 1080x1350 renders at all in this route
-    return new ImageResponse(
-      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', backgroundColor: '#003DA5', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: '#FCD116', fontSize: 40, fontWeight: 900 }}>Levantando a Venezuela</div>
-        <div style={{ color: '#ffffff', fontSize: 18, marginTop: 16 }}>Pagina {page} - {orgs.length} orgs</div>
-        <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 8 }}>{generatedAt}</div>
-      </div>,
-      { width: 1080, height: 1350 }
-    )
+    // Diagnostic: return plain JSON to confirm branch is reached
+    return new Response(JSON.stringify({ reached: true, format, page: searchParams.get('page') }), {
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 
   const { data: summary } = await supabase
