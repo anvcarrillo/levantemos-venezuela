@@ -71,7 +71,62 @@ async function fetchAyudaOrgs(): Promise<{ orgs: AyudaOrg[]; generatedAt: string
   }
 }
 
-// ─── Instagram portrait image (1080×1350) ─────────────────────────────────────
+// ─── Instagram portrait image (1080×1350) — card layout ──────────────────────
+// Each page shows 6 org cards in a 2-column grid
+
+function OrgCard({ g }: { g: AyudaOrg }) {
+  const org = g.org
+  const nivelBg = g.activaCount > 0 ? '#CF0921' : '#D97706'
+  const nivelLabel = g.activaCount > 0 ? 'CRITICA' : 'PARCIAL'
+  const tipo = org.tipo.replace(/_/g, ' ')
+  const topNeeds = g.needs.slice(0, 3).map(n => {
+    const rem = n.cantidadNecesaria - n.cantidadComprometida - n.cantidadCumplida
+    return igClip(n.nombreArticulo, 24) + (rem > 0 ? ' ×' + String(rem) : '')
+  })
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', width: 480, backgroundColor: '#ffffff', borderRadius: 10, margin: 10, padding: 16, border: '1px solid #E5E7EB' }}>
+      {/* Top row: name + badge */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, marginRight: 8 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: '#111827', lineHeight: 1.2 }}>{igClip(org.nombre, 30)}</div>
+          <div style={{ fontSize: 9, color: '#6B7280', marginTop: 2 }}>{igClip(tipo, 26)}</div>
+        </div>
+        <div style={{ display: 'flex', backgroundColor: nivelBg, borderRadius: 4, padding: '3px 7px' }}>
+          <div style={{ color: '#ffffff', fontSize: 8, fontWeight: 800 }}>{nivelLabel}</div>
+        </div>
+      </div>
+
+      {/* Address */}
+      <div style={{ display: 'flex', marginBottom: 8 }}>
+        <div style={{ fontSize: 9, color: '#374151', lineHeight: 1.3 }}>
+          {igClip(org.direccion, 55)} — {org.ciudad}, {org.estado}
+        </div>
+      </div>
+
+      {/* Materials */}
+      <div style={{ display: 'flex', flexDirection: 'column', marginBottom: 8 }}>
+        <div style={{ fontSize: 8, fontWeight: 700, color: '#003DA5', marginBottom: 3 }}>MATERIALES NECESARIOS</div>
+        {topNeeds.map((need, ni) => (
+          <div key={ni} style={{ display: 'flex', fontSize: 9, color: '#374151', marginBottom: 1 }}>
+            {'• '}{need}
+          </div>
+        ))}
+        {g.needs.length > 3 ? <div style={{ fontSize: 8, color: '#6B7280' }}>{'+'}{String(g.needs.length - 3)}{' mas...'}</div> : null}
+      </div>
+
+      {/* Contact + verified */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {org.contactoNombre ? <div style={{ fontSize: 9, color: '#111827', fontWeight: 600 }}>{igClip(org.contactoNombre, 22)}</div> : null}
+          {org.contactoTelefono ? <div style={{ fontSize: 9, color: '#003DA5' }}>{org.contactoTelefono}</div> : null}
+          {!org.contactoNombre && !org.contactoTelefono ? <div style={{ fontSize: 9, color: '#6B7280' }}>Contacto no disponible</div> : null}
+        </div>
+        {org.verificada ? <div style={{ fontSize: 8, color: '#059669', fontWeight: 700, marginLeft: 6 }}>Verificada</div> : null}
+      </div>
+    </div>
+  )
+}
 
 function InstagramPage({
   orgs,
@@ -79,7 +134,6 @@ function InstagramPage({
   page,
   totalPages,
   generatedAt,
-  rowH,
   totalNeeds,
 }: {
   orgs: AyudaOrg[]
@@ -87,123 +141,53 @@ function InstagramPage({
   page: number
   totalPages: number
   generatedAt: string
-  rowH: number
   totalNeeds: number
 }) {
-  const CW = [160, 148, 200, 128, 68, 148, 148]
+  const leftCol = pageOrgs.filter((_, i) => i % 2 === 0)
+  const rightCol = pageOrgs.filter((_, i) => i % 2 === 1)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', backgroundColor: '#ffffff', fontFamily: 'sans-serif' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', backgroundColor: '#F9FAFB', fontFamily: 'sans-serif' }}>
 
       {/* Flag stripe */}
-      <div style={{ display: 'flex', height: 8 }}>
+      <div style={{ display: 'flex', height: 10 }}>
         <div style={{ flex: 1, backgroundColor: '#FCD116' }} />
         <div style={{ flex: 1, backgroundColor: '#003DA5' }} />
         <div style={{ flex: 1, backgroundColor: '#CF0921' }} />
       </div>
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 40px', height: 82, backgroundColor: '#003DA5' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 30px', backgroundColor: '#003DA5' }}>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ color: '#FCD116', fontSize: 12, fontWeight: 900 }}>Levantando a Venezuela - Coordinacion de Voluntarios</div>
-          <div style={{ color: '#ffffff', fontSize: 20, fontWeight: 900, lineHeight: 1.1, marginTop: 2 }}>Centros con Necesidades Criticas</div>
-          <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 9, marginTop: 3 }}>ayudaencamino.com - {orgs.length} organizaciones - {totalNeeds} items</div>
+          <div style={{ color: '#FCD116', fontSize: 13, fontWeight: 900 }}>Levantando a Venezuela</div>
+          <div style={{ color: '#ffffff', fontSize: 22, fontWeight: 900, lineHeight: 1.1 }}>Coordinacion de Voluntarios</div>
+          <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 10, marginTop: 3 }}>
+            {orgs.length} centros · {totalNeeds} necesidades criticas
+          </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 8 }}>Generado el</div>
-          <div style={{ color: '#ffffff', fontSize: 9, fontWeight: 700 }}>{generatedAt}</div>
-          <div style={{ display: 'flex', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, padding: '2px 10px', marginTop: 5 }}>
-            <div style={{ color: '#ffffff', fontSize: 9, fontWeight: 700 }}>{page} / {totalPages}</div>
+          <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 9 }}>{generatedAt}</div>
+          <div style={{ display: 'flex', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20, padding: '3px 12px', marginTop: 6 }}>
+            <div style={{ color: '#ffffff', fontSize: 11, fontWeight: 700 }}>{page} / {totalPages}</div>
           </div>
         </div>
       </div>
 
-      {/* Column headers */}
-      <div style={{ display: 'flex', height: 30, backgroundColor: '#111827', paddingLeft: 40 }}>
-        <div style={{ display: 'flex', alignItems: 'center', width: CW[0], paddingLeft: 6, borderRight: '1px solid #374151' }}>
-          <div style={{ color: '#FCD116', fontSize: 8, fontWeight: 800 }}>CENTRO</div>
+      {/* 2-column card grid */}
+      <div style={{ display: 'flex', flex: 1, padding: '0 10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', width: 500 }}>
+          {leftCol.map(g => <OrgCard key={String(g.orgId)} g={g} />)}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', width: CW[1], paddingLeft: 6, borderRight: '1px solid #374151' }}>
-          <div style={{ color: '#FCD116', fontSize: 8, fontWeight: 800 }}>DIRECCION</div>
+        <div style={{ display: 'flex', flexDirection: 'column', width: 500 }}>
+          {rightCol.map(g => <OrgCard key={String(g.orgId)} g={g} />)}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', width: CW[2], paddingLeft: 6, borderRight: '1px solid #374151' }}>
-          <div style={{ color: '#FCD116', fontSize: 8, fontWeight: 800 }}>MATERIALES</div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', width: CW[3], paddingLeft: 6, borderRight: '1px solid #374151' }}>
-          <div style={{ color: '#FCD116', fontSize: 8, fontWeight: 800 }}>CONTACTO</div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', width: CW[4], paddingLeft: 4, borderRight: '1px solid #374151' }}>
-          <div style={{ color: '#FCD116', fontSize: 8, fontWeight: 800 }}>NIVEL</div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', width: CW[5], paddingLeft: 6, borderRight: '1px solid #374151' }}>
-          <div style={{ color: '#FCD116', fontSize: 8, fontWeight: 800 }}>ADVERTENCIAS</div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', width: CW[6], paddingLeft: 6 }}>
-          <div style={{ color: '#FCD116', fontSize: 8, fontWeight: 800 }}>RECOMENDACIONES</div>
-        </div>
-      </div>
-
-      {/* Data rows */}
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, paddingLeft: 40 }}>
-        {pageOrgs.map((g, ri) => {
-          const org = g.org
-          const nivelBg = g.activaCount > 0 ? '#CF0921' : '#D97706'
-          const nivelLabel = g.activaCount > 0 ? 'CRITICA' : 'PARCIAL'
-          const tipo = org.tipo.replace(/_/g, ' ')
-          const matLines: string[] = g.needs.slice(0, 4).map(n => {
-            const rem = n.cantidadNecesaria - n.cantidadComprometida - n.cantidadCumplida
-            return igClip(n.nombreArticulo, 20) + (rem > 0 ? ' x' + String(rem) : '')
-          })
-          if (g.needs.length > 4) matLines.push('+' + String(g.needs.length - 4) + ' mas')
-          const advText = g.activaCount > 0
-            ? String(g.activaCount) + ' sin compromiso'
-            : String(g.parcialCount) + ' parcialmente'
-          const recText = org.contactoTelefono
-            ? 'Llamar: ' + (org.contactoNombre ? org.contactoNombre.split(' ')[0] + ' ' : '') + org.contactoTelefono
-            : org.verificada ? 'Org. verificada' : 'Coordinar por redes'
-
-          return (
-            <div key={String(g.orgId)} style={{ display: 'flex', height: rowH, backgroundColor: ri % 2 === 1 ? '#F3F4F6' : '#ffffff', borderBottom: '1px solid #E5E7EB' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: CW[0], paddingLeft: 6, paddingRight: 6, borderRight: '1px solid #E5E7EB' }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#111827' }}>{igClip(org.nombre, 28)}</div>
-                <div style={{ fontSize: 8, color: '#6B7280', marginTop: 2 }}>{igClip(tipo, 22)}</div>
-                {org.verificada ? <div style={{ fontSize: 8, color: '#059669', fontWeight: 700 }}>Verificada</div> : null}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: CW[1], paddingLeft: 6, paddingRight: 6, borderRight: '1px solid #E5E7EB' }}>
-                <div style={{ fontSize: 8, color: '#111827' }}>{igClip(org.direccion, 50)}</div>
-                <div style={{ fontSize: 8, color: '#6B7280', marginTop: 2, fontWeight: 600 }}>{org.ciudad}, {org.estado}</div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: CW[2], paddingLeft: 6, paddingRight: 6, borderRight: '1px solid #E5E7EB' }}>
-                {matLines.map((line, li) => (
-                  <div key={li} style={{ fontSize: 8, color: '#111827' }}>{'• '}{line}</div>
-                ))}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: CW[3], paddingLeft: 6, paddingRight: 6, borderRight: '1px solid #E5E7EB' }}>
-                {org.contactoNombre ? <div style={{ fontSize: 8, color: '#111827', fontWeight: 600 }}>{igClip(org.contactoNombre, 22)}</div> : null}
-                {org.contactoTelefono ? <div style={{ fontSize: 8, color: '#003DA5', marginTop: 2 }}>{org.contactoTelefono}</div> : null}
-                {!org.contactoNombre && !org.contactoTelefono ? <div style={{ fontSize: 8, color: '#6B7280' }}>N/D</div> : null}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: CW[4], borderRight: '1px solid #E5E7EB' }}>
-                <div style={{ display: 'flex', backgroundColor: nivelBg, borderRadius: 3, padding: '3px 4px' }}>
-                  <div style={{ color: '#ffffff', fontSize: 8, fontWeight: 800 }}>{nivelLabel}</div>
-                </div>
-                <div style={{ fontSize: 7, color: '#6B7280', marginTop: 3 }}>{String(g.needs.length)} items</div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: CW[5], paddingLeft: 6, paddingRight: 6, borderRight: '1px solid #E5E7EB' }}>
-                <div style={{ fontSize: 8, color: '#92400E' }}>{advText}</div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: CW[6], paddingLeft: 6, paddingRight: 6 }}>
-                <div style={{ fontSize: 8, color: '#1E40AF' }}>{igClip(recText, 55)}</div>
-              </div>
-            </div>
-          )
-        })}
-        {pageOrgs.length < 8 ? <div style={{ display: 'flex', flex: 1, backgroundColor: '#FAFAFA' }} /> : null}
       </div>
 
       {/* Footer */}
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 40px', height: 28, backgroundColor: '#1F2937' }}>
-        <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 8 }}>levantandoavenezuela.vercel.app - ayudaencamino.com - Urgencia CRITICA</div>
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 40px', backgroundColor: '#1F2937' }}>
+        <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10 }}>
+          levantandoavenezuela.vercel.app · ayudaencamino.com · Solo urgencia CRITICA
+        </div>
       </div>
 
     </div>
@@ -522,12 +506,11 @@ export async function GET(request: Request) {
       )
     }
 
-    const PER_PAGE = 8
+    const PER_PAGE = 6
     const pageOrgs = orgs.slice((page - 1) * PER_PAGE, page * PER_PAGE)
     const totalPages = Math.ceil(orgs.length / PER_PAGE)
     if (!pageOrgs.length) return new Response('Page not found', { status: 404 })
 
-    const rowH = Math.floor((1350 - 90 - 30 - 28) / PER_PAGE)
     const totalNeeds = orgs.reduce((s, g) => s + g.needs.length, 0)
 
     return new ImageResponse(
@@ -537,7 +520,6 @@ export async function GET(request: Request) {
         page={page}
         totalPages={totalPages}
         generatedAt={generatedAt}
-        rowH={rowH}
         totalNeeds={totalNeeds}
       />,
       { width: 1080, height: 1350 }
