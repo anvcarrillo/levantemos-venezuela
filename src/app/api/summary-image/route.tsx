@@ -354,13 +354,16 @@ export async function GET(request: Request) {
 
   // ── Instagram portrait image (1080×1350) ──
   if (format === 'instagram') {
-    // Step 2: test ImageResponse at 1080x1350 with no dynamic data
-    return new ImageResponse(
-      <div style={{ display: 'flex', backgroundColor: '#003DA5', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: '#FCD116', fontSize: 48, fontWeight: 900 }}>OK 1080x1350</div>
-      </div>,
-      { width: 1080, height: 1350 }
-    )
+    // Step 3: test fetchAyudaOrgs() with static data
+    try {
+      const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
+      const { orgs, generatedAt } = await fetchAyudaOrgs()
+      return new Response(JSON.stringify({ ok: true, orgsCount: orgs.length, firstOrg: orgs[0]?.org.nombre, generatedAt, page }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+    } catch (e) {
+      return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { 'Content-Type': 'application/json' } })
+    }
   }
 
   const { data: summary } = await supabase
